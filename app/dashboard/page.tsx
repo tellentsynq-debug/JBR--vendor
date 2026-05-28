@@ -1,8 +1,8 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { useRouter, usePathname } from "next/navigation"; // Added Next.js routing
+import { useRouter, usePathname } from "next/navigation"; 
 import { 
   Users, 
   Calendar, 
@@ -99,7 +99,7 @@ const SIDEBAR_MENU = [
     group: "Administration",
     items: [
       { id: "user_mgmt", label: "User Management", icon: UserCog, path: "/users" },
-      { id: "master_mgmt", label: "Master Management", icon: Settings, path: "/master-management" },
+      { id: "master_mgmt", label: "Master Management", icon: Settings, path: "/master" },
     ]
   },
   {
@@ -110,12 +110,13 @@ const SIDEBAR_MENU = [
   }
 ];
 
+// ADDED NAVIGATION HREFS TO STATS DATA
 const STATS_DATA = [
-  { label: "Total Candidates", value: "1744", sub: "1744 registered", icon: Users },
-  { label: "Active Campaigns", value: "1", sub: "1 running", icon: Calendar },
-  { label: "Verified Candidates", value: "403", sub: "403 verified", icon: BadgeCheck },
-  { label: "License Expiring", value: "0", sub: "This month", icon: AlertTriangle, alert: true },
-  { label: "Conversion Rate", value: "23%", sub: "23% verified", icon: TrendingUp },
+  { label: "Total Candidates", value: "1744", sub: "1744 registered", icon: Users, href: "/employees" },
+  { label: "Active Campaigns", value: "1", sub: "1 running", icon: Calendar, href: "/campaigns" },
+  { label: "Verified Candidates", value: "403", sub: "403 verified", icon: BadgeCheck, href: "/employees?status=verified" },
+  { label: "License Expiring", value: "0", sub: "This month", icon: AlertTriangle, alert: true, href: "/employees?filter=license-expiring" },
+  { label: "Conversion Rate", value: "23%", sub: "23% verified", icon: TrendingUp, href: "/master-report" },
 ];
 
 const RECENT_ACTIVITY = [
@@ -136,9 +137,8 @@ const JOB_CATEGORIES = [
   { name: "Book Keeper", total: 15, verified: 5 },
 ];
 
-// Extracted variables for functional Donut Chart calculation
 const CAMPAIGN_STATS = {
-  active: parseInt(STATS_DATA[1].value), // 1
+  active: parseInt(STATS_DATA[1].value), 
   inactive: 3, 
   ended: 1
 };
@@ -160,7 +160,6 @@ const itemVars = {
 
 /* ─── COMPONENTS ─────────────────────────────────────────────── */
 
-// 1. Ambient Background
 function DashboardBackground() {
   return (
     <div style={{ position: "fixed", inset: 0, zIndex: -1, pointerEvents: "none", overflow: "hidden" }}>
@@ -172,7 +171,6 @@ function DashboardBackground() {
   );
 }
 
-// 2. Sidebar Layout
 function Sidebar({ isCollapsed, setCollapsed, activeTab, setActiveTab }: any) {
   const router = useRouter();
   const pathname = usePathname();
@@ -197,7 +195,6 @@ function Sidebar({ isCollapsed, setCollapsed, activeTab, setActiveTab }: any) {
         flexShrink: 0 
       }}
     >
-      {/* Sidebar Header / Logo */}
       <div style={{ padding: "24px", display: "flex", alignItems: "center", justifyContent: isCollapsed ? "center" : "space-between", borderBottom: `1px solid ${C.border}`, height: "85px" }}>
         <AnimatePresence mode="wait">
           {!isCollapsed && (
@@ -230,12 +227,10 @@ function Sidebar({ isCollapsed, setCollapsed, activeTab, setActiveTab }: any) {
         </motion.button>
       </div>
 
-      {/* Navigation Links */}
       <div style={{ flex: 1, overflowY: "auto", padding: "24px 16px", display: "flex", flexDirection: "column", gap: "32px" }}>
         {SIDEBAR_MENU.map((group, gIdx) => (
           <div key={gIdx} style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
             
-            {/* Group Label */}
             {!isCollapsed ? (
               <motion.span initial={{ opacity: 0 }} animate={{ opacity: 1 }} style={{ fontSize: "10px", letterSpacing: "1.5px", textTransform: "uppercase", color: C.muted, paddingLeft: "12px", marginBottom: "4px" }}>
                 {group.group}
@@ -244,9 +239,7 @@ function Sidebar({ isCollapsed, setCollapsed, activeTab, setActiveTab }: any) {
               <div style={{ height: "1px", background: C.border, margin: "8px 0" }} />
             )}
 
-            {/* Links */}
             {group.items.map((item) => {
-              // Checks URL first for active state, falls back to state 
               const isActive = activeTab ? activeTab === item.id : pathname === item.path;
               const Icon = item.icon;
               
@@ -255,7 +248,7 @@ function Sidebar({ isCollapsed, setCollapsed, activeTab, setActiveTab }: any) {
                   key={item.id}
                   onClick={() => {
                     setActiveTab(item.id);
-                    router.push(item.path); // ACTUAL NAVIGATION HAPPENDS HERE
+                    router.push(item.path);
                   }}
                   whileHover={!isActive ? { backgroundColor: "rgba(255,255,255,0.03)", x: 4 } : {}}
                   whileTap={{ scale: 0.98 }}
@@ -267,7 +260,6 @@ function Sidebar({ isCollapsed, setCollapsed, activeTab, setActiveTab }: any) {
                     position: "relative", transition: "color 0.2s ease"
                   }}
                 >
-                  {/* Active Indicator Line */}
                   {isActive && (
                     <motion.div layoutId="activeTabIndicator" style={{ position: "absolute", left: 0, top: "10%", bottom: "10%", width: "3px", borderRadius: "0 4px 4px 0", background: C.red, boxShadow: `0 0 10px ${C.red}` }} />
                   )}
@@ -296,7 +288,6 @@ function Sidebar({ isCollapsed, setCollapsed, activeTab, setActiveTab }: any) {
   );
 }
 
-// 3. Top Header Area
 function TopNav({ activeTabLabel }: { activeTabLabel: string }) {
   return (
     <motion.header 
@@ -331,20 +322,25 @@ function TopNav({ activeTabLabel }: { activeTabLabel: string }) {
   );
 }
 
-// 4. Component Builders
 function StatCard({ data }: { data: typeof STATS_DATA[0] }) {
+  const router = useRouter(); // ADDED NEXT.JS ROUTER
   const Icon = data.icon;
+  // Use bracket notation to safely access the optional alert property dynamically
+  const isAlert = 'alert' in data && data.alert;
+
   return (
     <motion.div 
+      onClick={() => { if(data.href) router.push(data.href) }} // ADDED NAVIGATION LINK
       variants={itemVars}
       whileHover={{ y: -4, borderColor: C.borderHover, boxShadow: "0 15px 40px rgba(0,0,0,0.6), 0 0 20px rgba(255,255,255,0.02), inset 0 1px 0 rgba(255,255,255,0.05)" }}
+      whileTap={{ scale: 0.98 }} // ADDED TAP ANIMATION
       className="glass-card" 
       style={{ 
         padding: "20px", 
         display: "flex", 
         justifyContent: "space-between", 
         alignItems: "flex-start", 
-        cursor: "default",
+        cursor: data.href ? "pointer" : "default", // ADDED POINTER CURSOR
         minWidth: 0 
       }}>
       <div style={{ flex: 1, minWidth: 0, paddingRight: "12px" }}>
@@ -360,8 +356,11 @@ function StatCard({ data }: { data: typeof STATS_DATA[0] }) {
       </div>
       <div style={{
         width: "40px", height: "40px", borderRadius: "10px", flexShrink: 0,
-        background: data.alert ? C.redGlow : "rgba(255,255,255,0.03)", border: `1px solid ${data.alert ? C.red : C.border}`,
-        display: "flex", alignItems: "center", justifyContent: "center", color: data.alert ? C.redBright : C.mutedLight, boxShadow: data.alert ? `0 0 15px ${C.redGlow}` : "none"
+        background: isAlert ? C.redGlow : "rgba(255,255,255,0.03)", 
+        border: `1px solid ${isAlert ? C.red : C.border}`,
+        display: "flex", alignItems: "center", justifyContent: "center", 
+        color: isAlert ? C.redBright : C.mutedLight, 
+        boxShadow: isAlert ? `0 0 15px ${C.redGlow}` : "none"
       }}>
         <Icon size={18} strokeWidth={2} />
       </div>
@@ -469,10 +468,12 @@ function CustomBarChart({ title, type }: { title: string, type: "total" | "verif
   );
 }
 
-function ActionCard({ title, sub, type, icon: Icon }: { title: string, sub: string, type: "primary"|"secondary"|"tertiary", icon: any }) {
+function ActionCard({ title, sub, type, icon: Icon, href }: { title: string, sub: string, type: "primary"|"secondary"|"tertiary", icon: any, href: string }) {
+  const router = useRouter();
   const isPrimary = type === "primary"; const isTertiary = type === "tertiary";
   return (
     <motion.div 
+      onClick={() => router.push(href)}
       variants={itemVars} whileHover={{ y: -6, scale: 1.02 }} whileTap={{ scale: 0.98 }}
       style={{
         flex: 1, padding: "28px", borderRadius: "16px", cursor: "pointer", position: "relative", overflow: "hidden",
@@ -496,7 +497,6 @@ export default function JBRLayout() {
   const [isSidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [activeTab, setActiveTab] = useState("dashboard");
 
-  // Get active tab label for TopNav breadcrumb
   const activeTabLabel = SIDEBAR_MENU.flatMap(g => g.items).find(i => i.id === activeTab)?.label || "Dashboard";
 
   return (
@@ -506,7 +506,6 @@ export default function JBRLayout() {
       
       <div style={{ display: "flex", height: "100vh", overflow: "hidden" }}>
         
-        {/* Left Fixed Sidebar - NOW USING ROUTING */}
         <Sidebar 
           isCollapsed={isSidebarCollapsed} 
           setCollapsed={setSidebarCollapsed} 
@@ -514,12 +513,10 @@ export default function JBRLayout() {
           setActiveTab={setActiveTab} 
         />
 
-        {/* Right Scrollable Main Content */}
         <div style={{ flex: 1, display: "flex", flexDirection: "column", overflowY: "auto", position: "relative" }}>
           
           <TopNav activeTabLabel={activeTabLabel} />
 
-          {/* Render content conditionally based on active tab. For now, showing Dashboard content */}
           <main style={{ padding: "40px", maxWidth: "1600px", margin: "0 auto", width: "100%", display: "flex", flexDirection: "column", gap: "32px" }}>
             
             <AnimatePresence mode="wait">
@@ -567,9 +564,9 @@ export default function JBRLayout() {
                   <motion.div variants={containerVars} initial="hidden" whileInView="show" viewport={{ once: true }} style={{ marginTop: "16px", paddingBottom: "40px" }}>
                     <motion.h3 variants={itemVars} style={{ fontSize: "18px", fontWeight: 600, marginBottom: "20px" }}>Quick Actions</motion.h3>
                     <div style={{ display: "flex", flexWrap: "wrap", gap: "24px" }}>
-                      <ActionCard title="Create Campaign" sub="Manage 1 campaigns" type="primary" icon={Plus} />
-                      <ActionCard title="View Employees" sub="1744 registered" type="secondary" icon={Users} />
-                      <ActionCard title="Generate Report" sub="3 available reports" type="tertiary" icon={FileText} />
+                      <ActionCard title="Create Campaign" sub="Manage 1 campaigns" type="primary" icon={Plus} href="/campaigns" />
+                      <ActionCard title="View Employees" sub="1744 registered" type="secondary" icon={Users} href="/employees" />
+                      <ActionCard title="Generate Report" sub="3 available reports" type="tertiary" icon={FileText} href="/master-report" />
                     </div>
                   </motion.div>
                 </motion.div>

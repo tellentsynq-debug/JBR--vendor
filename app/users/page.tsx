@@ -1,9 +1,9 @@
 "use client";
 
 import React, { useState } from "react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { 
-  LogOut, Plus, Edit2, Trash2, UserCog 
+  LogOut, Plus, Edit2, Trash2, UserCog, X, ChevronDown 
 } from "lucide-react";
 
 import Sidebar, { C } from "../components/Sidebar";
@@ -36,6 +36,10 @@ const GLOBAL_CSS = `
 
   .table-container { width: 100%; overflow-x: auto; }
   .table-min-width { min-width: 1000px; }
+
+  /* Custom Select Reset */
+  select { appearance: none; background-color: transparent; cursor: pointer; }
+  select option { background-color: ${C.panel}; color: ${C.white}; }
 `;
 
 /* ─── MOCK DATA ──────────────────────────────────────────────── */
@@ -112,10 +116,95 @@ function TopNav() {
   );
 }
 
+// Custom Input Component for the Dialog
+function FormField({ label, placeholder, type = "text", autoFocus = false }: { label: string, placeholder: string, type?: string, autoFocus?: boolean }) {
+  const [focused, setFocused] = useState(autoFocus);
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: "8px", flex: 1 }}>
+      <label style={{ fontSize: "11px", fontWeight: 500, color: C.mutedLight }}>{label}</label>
+      <div style={{ position: "relative" }}>
+        <input 
+          type={type} 
+          placeholder={placeholder}
+          autoFocus={autoFocus}
+          onFocus={() => setFocused(true)}
+          onBlur={() => setFocused(false)}
+          style={{
+            width: "100%", padding: "12px 16px",
+            background: "rgba(255,255,255,0.02)",
+            border: `1px solid ${focused ? C.red : C.border}`,
+            borderRadius: "8px", color: C.white, fontSize: "13px",
+            outline: "none", transition: "all 0.2s ease",
+            boxShadow: focused ? `0 0 0 3px ${C.redGlow}` : "none"
+          }}
+        />
+      </div>
+    </div>
+  );
+}
+
+// Custom Select Component for the Dialog
+function FormSelect({ label, options }: { label: string, options: string[] }) {
+  const [focused, setFocused] = useState(false);
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: "8px", flex: 1 }}>
+      <label style={{ fontSize: "11px", fontWeight: 500, color: C.mutedLight }}>{label}</label>
+      <div style={{ position: "relative" }}>
+        <select 
+          onFocus={() => setFocused(true)}
+          onBlur={() => setFocused(false)}
+          style={{
+            width: "100%", padding: "12px 36px 12px 16px",
+            background: "rgba(255,255,255,0.02)",
+            border: `1px solid ${focused ? C.red : C.border}`,
+            borderRadius: "8px", color: C.white, fontSize: "13px",
+            outline: "none", transition: "all 0.2s ease",
+            boxShadow: focused ? `0 0 0 3px ${C.redGlow}` : "none"
+          }}
+        >
+          {options.map(opt => <option key={opt}>{opt}</option>)}
+        </select>
+        <ChevronDown size={16} color={C.muted} style={{ position: "absolute", right: "12px", top: "50%", transform: "translateY(-50%)", pointerEvents: "none" }} />
+      </div>
+    </div>
+  );
+}
+
+// Custom Toggle Switch
+function ToggleSwitch({ label }: { label: string }) {
+  const [isOn, setIsOn] = useState(true);
+  
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: "12px", marginTop: "8px" }}>
+      <div 
+        onClick={() => setIsOn(!isOn)}
+        style={{
+          width: "44px", height: "24px", borderRadius: "12px",
+          background: isOn ? C.emerald : "rgba(255,255,255,0.1)",
+          position: "relative", cursor: "pointer", transition: "background 0.3s ease"
+        }}
+      >
+        <motion.div 
+          layout
+          initial={false}
+          animate={{ x: isOn ? 22 : 2 }}
+          style={{
+            width: "20px", height: "20px", borderRadius: "50%",
+            background: C.white, position: "absolute", top: "2px",
+            boxShadow: "0 2px 5px rgba(0,0,0,0.2)"
+          }}
+        />
+      </div>
+      <span style={{ fontSize: "13px", color: C.offWhite, fontWeight: 500 }}>{label}</span>
+    </div>
+  );
+}
+
 /* ─── MAIN PAGE ────────────────────────────────────── */
 export default function UserManagementPage() {
   const [isSidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [activeTab, setActiveTab] = useState("user_mgmt");
+  const [isModalOpen, setModalOpen] = useState(false);
   
   // Custom Table Layout
   const tableGridTemplate = "1.5fr 2fr 1fr 1fr 1fr 100px"; 
@@ -154,6 +243,7 @@ export default function UserManagementPage() {
               </div>
               
               <motion.button 
+                onClick={() => setModalOpen(true)}
                 whileHover={{ y: -2, boxShadow: `0 10px 20px ${C.redGlowStrong}` }} whileTap={{ scale: 0.98 }}
                 style={{
                   display: "flex", alignItems: "center", gap: "8px", padding: "12px 24px",
@@ -258,6 +348,91 @@ export default function UserManagementPage() {
           </main>
         </div>
       </div>
+
+      {/* CREATE USER DIALOG MODAL */}
+      <AnimatePresence>
+        {isModalOpen && (
+          <div style={{ position: "fixed", inset: 0, zIndex: 100, display: "flex", alignItems: "center", justifyContent: "center" }}>
+            
+            {/* Backdrop */}
+            <motion.div 
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.3 }}
+              style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.6)", backdropFilter: "blur(8px)", WebkitBackdropFilter: "blur(8px)" }}
+              onClick={() => setModalOpen(false)}
+            />
+
+            {/* Modal Content */}
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95, y: 20 }} transition={{ duration: 0.4, type: "spring", bounce: 0.3 }}
+              style={{ 
+                position: "relative", width: "100%", maxWidth: "560px", margin: "24px",
+                background: "linear-gradient(145deg, rgba(22,22,22,0.95), rgba(15,15,15,0.98))",
+                border: `1px solid rgba(255,255,255,0.08)`, borderRadius: "20px",
+                boxShadow: "0 25px 50px -12px rgba(0,0,0,0.7), inset 0 1px 0 rgba(255,255,255,0.05)"
+              }}
+            >
+              {/* Close Button */}
+              <button 
+                onClick={() => setModalOpen(false)}
+                style={{ position: "absolute", right: "24px", top: "24px", background: "transparent", border: "none", color: C.muted, cursor: "pointer", transition: "color 0.2s" }}
+                onMouseEnter={(e) => e.currentTarget.style.color = C.white}
+                onMouseLeave={(e) => e.currentTarget.style.color = C.muted}
+              >
+                <X size={20} />
+              </button>
+
+              <div style={{ padding: "32px 32px 24px" }}>
+                <h2 style={{ fontSize: "22px", fontWeight: 600, color: C.white, marginBottom: "8px", fontFamily: "'DM Sans', sans-serif" }}>Create User</h2>
+                <p style={{ fontSize: "13px", color: C.mutedLight }}>Create a new user account.</p>
+              </div>
+
+              <div style={{ padding: "0 32px 32px", display: "flex", flexDirection: "column", gap: "20px" }}>
+                
+                {/* Form Fields */}
+                <div style={{ display: "flex", gap: "16px" }}>
+                  <FormField label="First Name" placeholder="" autoFocus />
+                  <FormField label="Last Name" placeholder="" />
+                </div>
+                
+                <FormField label="Email" placeholder="" type="email" />
+                <FormField label="Phone Number" placeholder="" type="tel" />
+                
+                <FormSelect label="Role" options={["Viewer", "Recruiter", "Super Admin"]} />
+
+                <ToggleSwitch label="Active" />
+
+                {/* Footer Buttons */}
+                <div style={{ display: "flex", justifyContent: "flex-end", gap: "12px", marginTop: "16px" }}>
+                  <motion.button 
+                    whileHover={{ backgroundColor: "rgba(255,255,255,0.08)" }} whileTap={{ scale: 0.98 }}
+                    onClick={() => setModalOpen(false)}
+                    style={{
+                      padding: "10px 20px", background: "rgba(255,255,255,0.03)", border: `1px solid ${C.border}`, 
+                      borderRadius: "8px", color: C.offWhite, fontSize: "13px", fontWeight: 500, cursor: "pointer"
+                    }}
+                  >
+                    Cancel
+                  </motion.button>
+                  <motion.button 
+                    whileHover={{ y: -1, boxShadow: `0 8px 16px ${C.redGlowStrong}` }} whileTap={{ scale: 0.98 }}
+                    onClick={() => setModalOpen(false)}
+                    style={{
+                      padding: "10px 24px", background: `linear-gradient(135deg, ${C.redBright}, ${C.red})`, 
+                      border: `1px solid rgba(255,100,100,0.3)`, borderRadius: "8px", color: C.white, 
+                      fontSize: "13px", fontWeight: 600, cursor: "pointer"
+                    }}
+                  >
+                    Create
+                  </motion.button>
+                </div>
+
+              </div>
+            </motion.div>
+
+          </div>
+        )}
+      </AnimatePresence>
+
     </>
   );
 }

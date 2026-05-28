@@ -260,7 +260,8 @@ function Ticker() {
       borderBottom: `1px solid ${C.border}`,
       padding: "10px 0",
       background: "rgba(255,255,255,0.015)",
-      marginBottom: "52px",
+      marginBottom: "40px",
+      width: "100%"
     }}>
       <div style={{
         display: "flex",
@@ -383,56 +384,6 @@ function ModeTabs({ mode, onSwitch }: { mode: Mode; onSwitch: (m: Mode) => void 
           {m === "signin" ? "Sign In" : "Register"}
         </button>
       ))}
-    </div>
-  );
-}
-
-/* ─── GOOGLE BTN ─────────────────────────────────────────────── */
-function GoogleBtn({ label }: { label: string }) {
-  const [hov, setHov] = useState(false);
-  return (
-    <button
-      onMouseEnter={() => setHov(true)}
-      onMouseLeave={() => setHov(false)}
-      style={{
-        width: "100%",
-        padding: "12px",
-        display: "flex", alignItems: "center", justifyContent: "center", gap: "10px",
-        background: hov ? "rgba(255,255,255,0.07)" : "rgba(255,255,255,0.035)",
-        border: `1px solid ${hov ? C.borderHover : C.border}`,
-        borderRadius: "10px",
-        cursor: "pointer",
-        color: C.offWhite,
-        fontSize: "13px",
-        fontWeight: 500,
-        fontFamily: "'DM Sans', sans-serif",
-        letterSpacing: "0.3px",
-        transition: "all 0.25s cubic-bezier(0.4,0,0.2,1)",
-        transform: hov ? "translateY(-1px)" : "none",
-        boxShadow: hov ? "0 8px 24px rgba(0,0,0,0.3)" : "none",
-        marginBottom: "20px",
-      }}
-    >
-      <svg width="17" height="17" viewBox="0 0 24 24">
-        <path fill="#EA4335" d="M5.27 9.77A7.1 7.1 0 0 1 12 4.9c1.69 0 3.22.6 4.41 1.57l3.28-3.28A11.95 11.95 0 0 0 12 1C7.63 1 3.84 3.4 1.84 6.97l3.43 2.8z"/>
-        <path fill="#34A853" d="M16.04 17.65A7.06 7.06 0 0 1 12 19.1c-2.97 0-5.51-1.83-6.64-4.44l-3.43 2.64A11.96 11.96 0 0 0 12 23c3.24 0 5.97-1.18 8.06-3.09l-4.02-2.26z"/>
-        <path fill="#FBBC05" d="M19.55 12c0-.78-.08-1.55-.22-2.3H12v4.35h4.3a3.67 3.67 0 0 1-1.6 2.44l3.86 3A11.91 11.91 0 0 0 21 12c0-.64-.05-1.3-.12-1.95"/>
-        <path fill="#4285F4" d="M5.36 14.66A7.12 7.12 0 0 1 4.9 12c0-.93.16-1.82.44-2.65L1.91 6.56A11.82 11.82 0 0 0 1 12c0 1.88.44 3.65 1.22 5.22l3.14-2.56z"/>
-      </svg>
-      {label}
-    </button>
-  );
-}
-
-/* ─── DIVIDER ────────────────────────────────────────────────── */
-function Divider() {
-  return (
-    <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "20px" }}>
-      <div style={{ flex: 1, height: "1px", background: `linear-gradient(to right, transparent, ${C.border})` }} />
-      <span style={{ fontSize: "10px", letterSpacing: "2px", color: C.muted, fontFamily: "'DM Sans',sans-serif", textTransform: "uppercase" }}>
-        or continue
-      </span>
-      <div style={{ flex: 1, height: "1px", background: `linear-gradient(to left, transparent, ${C.border})` }} />
     </div>
   );
 }
@@ -661,9 +612,10 @@ function SuccessFlash({ visible, mode }: { visible: boolean; mode: Mode }) {
 function BrandPanel() {
   return (
     <div style={{
-      flex: "0 0 400px",
-      display: "flex", flexDirection: "column", justifyContent: "space-between",
-      padding: "52px 48px",
+      flex: 4, // 40% width for the Left Panel
+      display: "flex", flexDirection: "column", 
+      justifyContent: "center", 
+      padding: "52px 8%", 
       borderRight: `1px solid ${C.border}`,
       position: "relative",
       overflow: "hidden",
@@ -692,8 +644,8 @@ function BrandPanel() {
         animation: "floatC 12s ease-in-out infinite",
       }} />
 
-      {/* Top accent */}
-      <div>
+      {/* Top accent & Main Text */}
+      <div style={{ marginBottom: "12vh" }}> 
         <div style={{
           width: "0px", height: "2px",
           background: `linear-gradient(to right, ${C.red}, ${C.gold})`,
@@ -726,7 +678,7 @@ function BrandPanel() {
           </h1>
           <p style={{
             fontSize: "13px", color: C.mutedLight, lineHeight: 1.75,
-            fontFamily: "'DM Sans',sans-serif", marginTop: "20px", maxWidth: "280px",
+            fontFamily: "'DM Sans',sans-serif", marginTop: "20px", maxWidth: "420px",
           }}>
             We connect exceptional talent with organisations that value culture. Your career journey deserves a partner that truly understands.
           </p>
@@ -829,14 +781,14 @@ export default function JBRAuth() {
 
       <div style={{
         minHeight: "100vh",
-        display: "flex", alignItems: "center", justifyContent: "center",
+        display: "flex", alignItems: "stretch", 
         padding: "24px",
         position: "relative", zIndex: 1,
         fontFamily: "'DM Sans', sans-serif",
       }}>
         <div style={{
           display: "flex",
-          width: "100%", maxWidth: "900px",
+          width: "100%", 
           background: "rgba(11,11,11,0.88)",
           border: `1px solid ${C.border}`,
           borderRadius: "24px",
@@ -853,85 +805,98 @@ export default function JBRAuth() {
 
           {/* Auth panel */}
           <div style={{
-            flex: 1,
-            padding: "48px 44px",
+            flex: 6, // 60% width for the Right Panel 
+            padding: "48px 4%",  
             display: "flex", flexDirection: "column",
+            justifyContent: "center", 
             position: "relative",
             overflowY: "auto",
           }}>
-            <Ticker />
-            <Logo animate />
-            <ModeTabs mode={mode} onSwitch={switchMode} />
+            
+            {/* Group Ticker, Logo and Form together in the center */}
+            <div style={{ width: "100%", padding: "0 2%" }}>
+              <Ticker />
+            </div>
 
-            {/* Form */}
-            <div
-              key={formKey}
-              style={{
-                opacity,
-                transform: `translateY(${yOff}px)`,
-                transition: "opacity 0.28s ease, transform 0.35s cubic-bezier(0.4,0,0.2,1)",
-              }}
-            >
-              <GoogleBtn label={mode === "signin" ? "Continue with Google" : "Register with Google"} />
-              <Divider />
+            <div style={{
+              display: "flex", flexDirection: "column",
+              alignItems: "center",
+              width: "100%", maxWidth: "440px",
+              margin: "0 auto", 
+            }}>
+              <Logo animate />
+              
+              <div style={{ width: "100%" }}>
+                <ModeTabs mode={mode} onSwitch={switchMode} />
 
-              {mode === "signin" ? (
-                <>
-                  <Field label="Email Address" type="email" placeholder="you@jbrstaffingsolutions.com"
-                    value={email} onChange={setEmail} autoComplete="email" icon={emailIcon} delay={0.05} />
-                  <Field label="Password" type="password" placeholder="Enter your password"
-                    value={pwd} onChange={setPwd} autoComplete="current-password" icon={lockIcon}
-                    hint="Forgot password?" delay={0.1} />
-                  <PrimaryBtn label="Sign In" loading={loading} onClick={submit} />
-                  <p style={{ textAlign: "center", marginTop: "20px", fontSize: "13px", color: C.muted }}>
-                    No account?{" "}
-                    <button onClick={() => switchMode("signup")} style={{
-                      background: "none", border: "none", cursor: "pointer",
-                      color: C.red, fontSize: "13px", fontFamily: "'DM Sans',sans-serif",
-                      fontWeight: 500, padding: 0,
-                      borderBottom: `1px solid rgba(198,40,40,0.35)`,
-                      paddingBottom: "1px",
-                    }}>Create one now</button>
-                  </p>
-                </>
-              ) : (
-                <>
-                  <div style={{ display: "flex", gap: "12px" }}>
-                    <div style={{ flex: 1 }}>
-                      <Field label="First" placeholder="Jane" value={first} onChange={setFirst}
-                        autoComplete="given-name" icon={userIcon} delay={0.05} />
-                    </div>
-                    <div style={{ flex: 1 }}>
-                      <Field label="Last" placeholder="Doe" value={last} onChange={setLast}
-                        autoComplete="family-name" delay={0.1} />
-                    </div>
-                  </div>
-                  <Field label="Work Email" type="email" placeholder="you@jbrstaffingsolutions.com"
-                    value={signEmail} onChange={setSignEmail} autoComplete="email"
-                    icon={emailIcon} hint="@jbrstaffingsolutions.com" delay={0.15} />
-                  <Field label="Password" type="password" placeholder="Create a strong password"
-                    value={signPwd} onChange={setSignPwd} autoComplete="new-password"
-                    icon={lockIcon} delay={0.2} />
-                  <PwdStrength pwd={signPwd} />
-                  <p style={{ fontSize: "11px", color: "rgba(107,107,104,0.5)", lineHeight: 1.7, marginBottom: "16px" }}>
-                    By registering you agree to our{" "}
-                    <span style={{ color: C.mutedLight, cursor: "pointer", borderBottom: `1px solid rgba(154,152,150,0.3)` }}>Terms</span>
-                    {" "}&amp;{" "}
-                    <span style={{ color: C.mutedLight, cursor: "pointer", borderBottom: `1px solid rgba(154,152,150,0.3)` }}>Privacy Policy</span>.
-                  </p>
-                  <PrimaryBtn label="Create Account" loading={loading} onClick={submit} />
-                  <p style={{ textAlign: "center", marginTop: "20px", fontSize: "13px", color: C.muted }}>
-                    Already registered?{" "}
-                    <button onClick={() => switchMode("signin")} style={{
-                      background: "none", border: "none", cursor: "pointer",
-                      color: C.red, fontSize: "13px", fontFamily: "'DM Sans',sans-serif",
-                      fontWeight: 500, padding: 0,
-                      borderBottom: `1px solid rgba(198,40,40,0.35)`,
-                      paddingBottom: "1px",
-                    }}>Sign in</button>
-                  </p>
-                </>
-              )}
+                {/* Form */}
+                <div
+                  key={formKey}
+                  style={{
+                    opacity,
+                    transform: `translateY(${yOff}px)`,
+                    transition: "opacity 0.28s ease, transform 0.35s cubic-bezier(0.4,0,0.2,1)",
+                  }}
+                >
+                  {mode === "signin" ? (
+                    <>
+                      <Field label="Email Address" type="email" placeholder="you@jbrstaffingsolutions.com"
+                        value={email} onChange={setEmail} autoComplete="email" icon={emailIcon} delay={0.05} />
+                      <Field label="Password" type="password" placeholder="Enter your password"
+                        value={pwd} onChange={setPwd} autoComplete="current-password" icon={lockIcon}
+                        hint="Forgot password?" delay={0.1} />
+                      <PrimaryBtn label="Sign In" loading={loading} onClick={submit} />
+                      <p style={{ textAlign: "center", marginTop: "20px", fontSize: "13px", color: C.muted }}>
+                        No account?{" "}
+                        <button onClick={() => switchMode("signup")} style={{
+                          background: "none", border: "none", cursor: "pointer",
+                          color: C.red, fontSize: "13px", fontFamily: "'DM Sans',sans-serif",
+                          fontWeight: 500, padding: 0,
+                          borderBottom: `1px solid rgba(198,40,40,0.35)`,
+                          paddingBottom: "1px",
+                        }}>Create one now</button>
+                      </p>
+                    </>
+                  ) : (
+                    <>
+                      <div style={{ display: "flex", gap: "12px" }}>
+                        <div style={{ flex: 1 }}>
+                          <Field label="First" placeholder="Jane" value={first} onChange={setFirst}
+                            autoComplete="given-name" icon={userIcon} delay={0.05} />
+                        </div>
+                        <div style={{ flex: 1 }}>
+                          <Field label="Last" placeholder="Doe" value={last} onChange={setLast}
+                            autoComplete="family-name" delay={0.1} />
+                        </div>
+                      </div>
+                      <Field label="Work Email" type="email" placeholder="you@jbrstaffingsolutions.com"
+                        value={signEmail} onChange={setSignEmail} autoComplete="email"
+                        icon={emailIcon} hint="@jbrstaffingsolutions.com" delay={0.15} />
+                      <Field label="Password" type="password" placeholder="Create a strong password"
+                        value={signPwd} onChange={setSignPwd} autoComplete="new-password"
+                        icon={lockIcon} delay={0.2} />
+                      <PwdStrength pwd={signPwd} />
+                      <p style={{ fontSize: "11px", color: "rgba(107,107,104,0.5)", lineHeight: 1.7, marginBottom: "16px" }}>
+                        By registering you agree to our{" "}
+                        <span style={{ color: C.mutedLight, cursor: "pointer", borderBottom: `1px solid rgba(154,152,150,0.3)` }}>Terms</span>
+                        {" "}&amp;{" "}
+                        <span style={{ color: C.mutedLight, cursor: "pointer", borderBottom: `1px solid rgba(154,152,150,0.3)` }}>Privacy Policy</span>.
+                      </p>
+                      <PrimaryBtn label="Create Account" loading={loading} onClick={submit} />
+                      <p style={{ textAlign: "center", marginTop: "20px", fontSize: "13px", color: C.muted }}>
+                        Already registered?{" "}
+                        <button onClick={() => switchMode("signin")} style={{
+                          background: "none", border: "none", cursor: "pointer",
+                          color: C.red, fontSize: "13px", fontFamily: "'DM Sans',sans-serif",
+                          fontWeight: 500, padding: 0,
+                          borderBottom: `1px solid rgba(198,40,40,0.35)`,
+                          paddingBottom: "1px",
+                        }}>Sign in</button>
+                      </p>
+                    </>
+                  )}
+                </div>
+              </div>
             </div>
 
             <SuccessFlash visible={success} mode={mode} />

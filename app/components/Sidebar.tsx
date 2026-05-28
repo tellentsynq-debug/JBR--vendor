@@ -31,7 +31,7 @@ const SIDEBAR_MENU = [
     group: "Administration",
     items: [
       { id: "user_mgmt", label: "User Management", icon: UserCog, path: "/users" },
-      { id: "master_mgmt", label: "Master Management", icon: Settings, path: "/master-management" },
+      { id: "master_mgmt", label: "Master Management", icon: Settings, path: "/master" },
     ]
   },
   {

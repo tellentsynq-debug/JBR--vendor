@@ -1,11 +1,9 @@
 "use client";
 
 import React, { useState } from "react";
-import { motion } from "framer-motion";
-// FIX 1: Removed 'Sidebar' from lucide-react imports to prevent the component clash
-import { LogOut, Plus, Search, Copy, Check, Edit2, EyeOff } from "lucide-react";
-// FIX 1: Correctly imported the Sidebar component and C tokens
-import Sidebar, { C } from "../components/Sidebar"; 
+import { motion, AnimatePresence } from "framer-motion";
+import { LogOut, Plus, Search, Copy, Check, Edit2, EyeOff, X, Calendar as CalendarIcon } from "lucide-react";
+import Sidebar, { C } from "../components/Sidebar";
 
 /* ─── GLOBAL CSS & ANIMATIONS ────────────────────────────────── */
 const GLOBAL_CSS = `
@@ -32,14 +30,20 @@ const GLOBAL_CSS = `
     -webkit-backdrop-filter: blur(20px);
     box-shadow: 0 10px 30px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.02);
   }
-  
-  /* FIX 2: Added a class for horizontal scrolling on the table */
+
   .table-container {
     width: 100%;
     overflow-x: auto;
   }
   .table-min-width {
-    min-width: 1000px; /* Prevents columns from squishing on small screens */
+    min-width: 1000px;
+  }
+  
+  /* Reset Date Input Icon color for dark mode */
+  input[type="date"]::-webkit-calendar-picker-indicator {
+    filter: invert(1);
+    opacity: 0.5;
+    cursor: pointer;
   }
 `;
 
@@ -80,8 +84,7 @@ function TopNav() {
         position: "sticky", top: 0, zIndex: 10
       }}>
       
-      {/* FIX 3: Restored breadcrumb styling to match Dashboard */}
-      <div style={{ display: "flex", alignItems: "center", }}>
+      <div style={{ display: "flex", alignItems: "center" }}>
         <span style={{ fontSize: "12px", letterSpacing: "1px", textTransform: "uppercase", color: C.white, fontWeight: 500 }}>Campaign Link</span>
       </div>
       
@@ -99,7 +102,6 @@ function TopNav() {
   );
 }
 
-// Micro-interaction component for copying links
 function CopyLinkButton() {
   const [copied, setCopied] = useState(false);
 
@@ -127,12 +129,40 @@ function CopyLinkButton() {
   );
 }
 
+// Custom Input Field for the Dialog
+function FormField({ label, placeholder, isDate = false }: { label: string, placeholder: string, isDate?: boolean }) {
+  const [focused, setFocused] = useState(false);
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: "8px", flex: 1 }}>
+      <label style={{ fontSize: "11px", fontWeight: 500, color: C.mutedLight }}>{label}</label>
+      <div style={{ position: "relative" }}>
+        <input 
+          type={isDate ? "date" : "text"} 
+          placeholder={placeholder}
+          onFocus={() => setFocused(true)}
+          onBlur={() => setFocused(false)}
+          style={{
+            width: "100%", padding: "12px 16px",
+            background: "rgba(255,255,255,0.02)",
+            border: `1px solid ${focused ? C.red : C.border}`,
+            borderRadius: "8px", color: C.white, fontSize: "13px",
+            outline: "none", transition: "all 0.2s ease",
+            boxShadow: focused ? `0 0 0 3px ${C.redGlow}` : "none"
+          }}
+        />
+        {isDate && <CalendarIcon size={14} color={C.muted} style={{ position: "absolute", left: "16px", top: "50%", transform: "translateY(-50%)", pointerEvents: "none", opacity: 0 }} />} 
+        {/* Note: Native date inputs have their own icon on the right in webkit, so we just style the native one in GLOBAL_CSS */}
+      </div>
+    </div>
+  );
+}
+
 /* ─── MAIN PAGE ────────────────────────────────────── */
 export default function CampaignsPage() {
   const [isSidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [activeTab, setActiveTab] = useState("campaigns");
+  const [isModalOpen, setModalOpen] = useState(false);
 
-  // Custom CSS Grid map for the table columns
   const tableGridTemplate = "1.5fr 1fr 1fr 1fr 1.5fr 0.8fr"; 
 
   return (
@@ -142,19 +172,16 @@ export default function CampaignsPage() {
       
       <div style={{ display: "flex", height: "100vh", overflow: "hidden" }}>
         
-        {/* Extracted Reusable Sidebar */}
         <Sidebar 
           isCollapsed={isSidebarCollapsed} setCollapsed={setSidebarCollapsed} 
           activeTab={activeTab} setActiveTab={setActiveTab} 
         />
 
-        {/* Right Scrollable Content */}
         <div style={{ flex: 1, display: "flex", flexDirection: "column", overflowY: "auto", position: "relative" }}>
           <TopNav />
 
           <main style={{ padding: "40px", maxWidth: "1600px", margin: "0 auto", width: "100%", display: "flex", flexDirection: "column", gap: "32px" }}>
             
-            {/* Header Section */}
             <motion.div 
               initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }}
               style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", flexWrap: "wrap", gap: "16px" }}
@@ -169,6 +196,7 @@ export default function CampaignsPage() {
               </div>
               
               <motion.button 
+                onClick={() => setModalOpen(true)}
                 whileHover={{ y: -2, boxShadow: `0 10px 20px ${C.redGlowStrong}` }} whileTap={{ scale: 0.98 }}
                 style={{
                   display: "flex", alignItems: "center", gap: "8px", padding: "12px 24px",
@@ -184,10 +212,8 @@ export default function CampaignsPage() {
               </motion.button>
             </motion.div>
 
-            {/* Campaign List / Table Area */}
             <motion.div variants={containerVars} initial="hidden" animate="show" className="glass-card" style={{ display: "flex", flexDirection: "column", overflow: "hidden" }}>
               
-              {/* Card Header & Search */}
               <div style={{ padding: "24px 32px", borderBottom: `1px solid ${C.border}`, display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "16px" }}>
                 <h3 style={{ fontSize: "20px", fontWeight: 600, color: C.white }}>Campaign List</h3>
                 
@@ -206,11 +232,9 @@ export default function CampaignsPage() {
                 </div>
               </div>
 
-              {/* FIX 2: Wrapped the grid table in a responsive overflow container */}
               <div className="table-container">
                 <div className="table-min-width">
                   
-                  {/* Table Headers */}
                   <div style={{ display: "grid", gridTemplateColumns: tableGridTemplate, padding: "16px 32px", borderBottom: `1px solid ${C.border}`, background: "rgba(0,0,0,0.2)" }}>
                     {["Name", "Start Date", "End Date", "Status", "Link", "Actions"].map((head, i) => (
                       <span key={i} style={{ fontSize: "11px", textTransform: "uppercase", letterSpacing: "1px", color: C.mutedLight, fontWeight: 500 }}>
@@ -219,7 +243,6 @@ export default function CampaignsPage() {
                     ))}
                   </div>
 
-                  {/* Table Rows */}
                   <div style={{ display: "flex", flexDirection: "column" }}>
                     {CAMPAIGNS_DATA.map((camp, idx) => (
                       <motion.div 
@@ -231,16 +254,10 @@ export default function CampaignsPage() {
                           transition: "background-color 0.2s ease"
                         }}
                       >
-                        {/* Column 1: Name */}
                         <div style={{ fontSize: "14px", fontWeight: 500, color: C.white }}>{camp.name}</div>
-                        
-                        {/* Column 2: Start Date */}
                         <div style={{ fontSize: "13px", color: C.mutedLight }}>{camp.start}</div>
-                        
-                        {/* Column 3: End Date */}
                         <div style={{ fontSize: "13px", color: C.mutedLight }}>{camp.end}</div>
                         
-                        {/* Column 4: Status Badge */}
                         <div>
                           {camp.status === "Active" ? (
                             <div style={{ display: "inline-flex", alignItems: "center", gap: "6px", padding: "4px 12px", borderRadius: "20px", background: "rgba(229,57,53,0.1)", border: `1px solid rgba(229,57,53,0.2)`, color: C.redBright, fontSize: "11px", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.5px" }}>
@@ -257,23 +274,16 @@ export default function CampaignsPage() {
                           )}
                         </div>
 
-                        {/* Column 5: Link UI */}
                         <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
                           {camp.status !== "Draft" && <CopyLinkButton />}
-                          
                           {camp.linkStatus === "Working" && (
-                            <span style={{ padding: "4px 8px", borderRadius: "4px", background: C.emeraldGlow, color: C.emerald, fontSize: "10px", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.5px" }}>
-                              Working
-                            </span>
+                            <span style={{ padding: "4px 8px", borderRadius: "4px", background: C.emeraldGlow, color: C.emerald, fontSize: "10px", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.5px" }}>Working</span>
                           )}
                           {camp.linkStatus === "Expired" && (
-                            <span style={{ padding: "4px 8px", borderRadius: "4px", background: "rgba(255,255,255,0.05)", color: C.muted, fontSize: "10px", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.5px" }}>
-                              Expired
-                            </span>
+                            <span style={{ padding: "4px 8px", borderRadius: "4px", background: "rgba(255,255,255,0.05)", color: C.muted, fontSize: "10px", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.5px" }}>Expired</span>
                           )}
                         </div>
 
-                        {/* Column 6: Actions */}
                         <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
                           <motion.button whileHover={{ scale: 1.1, color: C.white }} whileTap={{ scale: 0.9 }} style={{ background: "transparent", border: "none", color: C.mutedLight, cursor: "pointer", padding: "6px" }}>
                             <Edit2 size={16} />
@@ -294,6 +304,74 @@ export default function CampaignsPage() {
           </main>
         </div>
       </div>
+
+      {/* CREATE CAMPAIGN DIALOG MODAL */}
+      <AnimatePresence>
+        {isModalOpen && (
+          <div style={{ position: "fixed", inset: 0, zIndex: 100, display: "flex", alignItems: "center", justifyContent: "center" }}>
+            
+            {/* Backdrop */}
+            <motion.div 
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.3 }}
+              style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.6)", backdropFilter: "blur(8px)", WebkitBackdropFilter: "blur(8px)" }}
+              onClick={() => setModalOpen(false)}
+            />
+
+            {/* Modal Content */}
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95, y: 20 }} transition={{ duration: 0.4, type: "spring", bounce: 0.3 }}
+              style={{ 
+                position: "relative", width: "100%", maxWidth: "560px", margin: "24px",
+                background: "linear-gradient(145deg, rgba(22,22,22,0.95), rgba(15,15,15,0.98))",
+                border: `1px solid rgba(255,255,255,0.08)`, borderRadius: "20px",
+                boxShadow: "0 25px 50px -12px rgba(0,0,0,0.7), inset 0 1px 0 rgba(255,255,255,0.05)"
+              }}
+            >
+              {/* Close Button */}
+              <button 
+                onClick={() => setModalOpen(false)}
+                style={{ position: "absolute", right: "24px", top: "24px", background: "transparent", border: "none", color: C.muted, cursor: "pointer", transition: "color 0.2s" }}
+                onMouseEnter={(e) => e.currentTarget.style.color = C.white}
+                onMouseLeave={(e) => e.currentTarget.style.color = C.muted}
+              >
+                <X size={20} />
+              </button>
+
+              <div style={{ padding: "32px 32px 24px" }}>
+                <h2 style={{ fontSize: "22px", fontWeight: 600, color: C.white, marginBottom: "8px", fontFamily: "'DM Sans', sans-serif" }}>Create New Campaign</h2>
+                <p style={{ fontSize: "13px", color: C.mutedLight }}>Define the parameters for your new recruitment campaign.</p>
+              </div>
+
+              <div style={{ padding: "0 32px 32px", display: "flex", flexDirection: "column", gap: "24px" }}>
+                
+                <FormField label="Campaign Name" placeholder="Enter campaign name" />
+                
+                <div style={{ display: "flex", gap: "16px" }}>
+                  <FormField label="Start Date" placeholder="Pick start date" isDate />
+                  <FormField label="End Date" placeholder="Pick end date" isDate />
+                </div>
+
+                <motion.button 
+                  whileHover={{ y: -2, boxShadow: `0 10px 20px ${C.redGlowStrong}` }} whileTap={{ scale: 0.98 }}
+                  style={{
+                    width: "100%", padding: "14px", marginTop: "8px",
+                    background: `linear-gradient(135deg, ${C.redBright}, ${C.red})`,
+                    border: `1px solid rgba(255,100,100,0.3)`, borderRadius: "10px",
+                    color: C.white, fontSize: "14px", fontWeight: 600, letterSpacing: "0.5px",
+                    cursor: "pointer", position: "relative", overflow: "hidden"
+                  }}
+                  onClick={() => setModalOpen(false)}
+                >
+                  <div style={{ position: "absolute", inset: 0, background: "linear-gradient(105deg, transparent 20%, rgba(255,255,255,0.15) 50%, transparent 80%)", backgroundSize: "300px 100%", animation: "shimmer 2.5s infinite" }} />
+                  <span style={{ position: "relative", zIndex: 1 }}>Create Campaign</span>
+                </motion.button>
+              </div>
+            </motion.div>
+
+          </div>
+        )}
+      </AnimatePresence>
+
     </>
   );
 }
