@@ -6,32 +6,53 @@ import {
   LogOut, Plus, Edit2, Trash2, UserCog, X, ChevronDown 
 } from "lucide-react";
 
-import Sidebar, { C } from "../components/Sidebar";
+import Sidebar from "../components/Sidebar";
+
+/* ─── DESIGN TOKENS (LIGHT GRAY PROFESSIONAL THEME) ─────────── */
+const C = {
+  bg: "#F0F2F5",
+  surface: "#FFFFFF",
+  border: "rgba(0,0,0,0.07)",
+  borderHover: "rgba(0,0,0,0.14)",
+  textHeading: "#111111",
+  textBody: "#1A1A1A",
+  textLabel: "#374151",
+  textMuted: "#6B7280",
+  textHint: "#9BA3AF",
+  red: "#C62828",
+  redBright: "#E53935",
+  redGlow: "rgba(229,57,53,0.20)",
+  redActiveBg: "rgba(198,40,40,0.08)",
+  inputBg: "#F4F6F8",
+  white: "#FFFFFF",
+  successBg: "rgba(5,150,105,0.10)",
+  successText: "#059669",
+  pendingBg: "rgba(59,130,246,0.08)",
+  pendingBorder: "rgba(59,130,246,0.2)",
+  pendingText: "#3B82F6",
+  alertBg: "rgba(198,40,40,0.08)",
+  alertText: "#C62828",
+  shadow: "rgba(0,0,0,0.06)",
+  shadowMd: "rgba(0,0,0,0.10)",
+};
 
 /* ─── GLOBAL CSS & ANIMATIONS ────────────────────────────────── */
 const GLOBAL_CSS = `
   @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;500;600;700&family=DM+Sans:wght@300;400;500;600;700&display=swap');
 
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-  body { background: ${C.bg}; color: ${C.offWhite}; font-family: 'DM Sans', sans-serif; overflow-x: hidden; }
+  body { background: ${C.bg}; color: ${C.textBody}; font-family: 'DM Sans', sans-serif; overflow-x: hidden; }
 
   ::-webkit-scrollbar { width: 8px; height: 8px; }
   ::-webkit-scrollbar-track { background: ${C.bg}; }
   ::-webkit-scrollbar-thumb { background: ${C.borderHover}; border-radius: 4px; }
-  ::-webkit-scrollbar-thumb:hover { background: ${C.muted}; }
+  ::-webkit-scrollbar-thumb:hover { background: rgba(0,0,0,0.25); }
 
-  @keyframes shimmer {
-    0%   { background-position: -400px 0; }
-    100% { background-position:  400px 0; }
-  }
-
-  .glass-card {
-    background: linear-gradient(145deg, rgba(17,17,17,0.9), rgba(12,12,12,0.95));
+  .clean-card {
+    background: ${C.surface};
     border: 1px solid ${C.border};
     border-radius: 16px;
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
-    box-shadow: 0 10px 30px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.02);
+    box-shadow: 0 1px 3px ${C.shadow}, 0 4px 16px ${C.shadow};
   }
 
   .table-container { width: 100%; overflow-x: auto; }
@@ -39,7 +60,7 @@ const GLOBAL_CSS = `
 
   /* Custom Select Reset */
   select { appearance: none; background-color: transparent; cursor: pointer; }
-  select option { background-color: ${C.panel}; color: ${C.white}; }
+  select option { background-color: ${C.surface}; color: ${C.textHeading}; }
 `;
 
 /* ─── MOCK DATA ──────────────────────────────────────────────── */
@@ -60,12 +81,12 @@ const USERS_DATA = [
 const getRoleBadgeStyle = (role: string) => {
   switch (role) {
     case 'SUPER ADMIN': 
-      return { bg: C.redGlow, border: "rgba(229,57,53,0.3)", color: C.redBright };
+      return { bg: C.alertBg, color: C.alertText };
     case 'RECRUITER': 
-      return { bg: C.emeraldGlow, border: "rgba(5, 150, 105, 0.3)", color: C.emerald };
+      return { bg: C.successBg, color: C.successText };
     case 'VIEWER': 
     default: 
-      return { bg: "rgba(255,255,255,0.05)", border: C.borderHover, color: C.mutedLight };
+      return { bg: C.inputBg, color: C.textMuted };
   }
 };
 
@@ -76,17 +97,6 @@ const itemVars = { hidden: { opacity: 0, y: 10 }, show: { opacity: 1, y: 0, tran
 
 /* ─── COMPONENTS ─────────────────────────────────────────────── */
 
-function AmbientBackground() {
-  return (
-    <div style={{ position: "fixed", inset: 0, zIndex: -1, pointerEvents: "none", overflow: "hidden" }}>
-      <div style={{ position: "absolute", inset: 0, background: `radial-gradient(circle at 50% 0%, ${C.surface} 0%, ${C.bg} 80%)` }} />
-      <div style={{ position: "absolute", top: "-10%", left: "-10%", width: "50vw", height: "50vw", background: `radial-gradient(circle, ${C.redGlow} 0%, transparent 60%)`, filter: "blur(100px)", opacity: 0.2 }} />
-      <div style={{ position: "absolute", bottom: "-20%", right: "-10%", width: "60vw", height: "60vw", background: `radial-gradient(circle, ${C.goldDim} 0%, transparent 60%)`, filter: "blur(120px)", opacity: 0.15 }} />
-      <div style={{ position: "absolute", inset: 0, backgroundImage: `linear-gradient(${C.border} 1px, transparent 1px), linear-gradient(90deg, ${C.border} 1px, transparent 1px)`, backgroundSize: "60px 60px", opacity: 0.3, maskImage: "linear-gradient(to bottom, black 20%, transparent 80%)", WebkitMaskImage: "linear-gradient(to bottom, black 20%, transparent 80%)" }} />
-    </div>
-  );
-}
-
 function TopNav() {
   return (
     <motion.header 
@@ -94,22 +104,22 @@ function TopNav() {
       style={{
         display: "flex", justifyContent: "space-between", alignItems: "center",
         padding: "20px 40px", borderBottom: `1px solid ${C.border}`,
-        background: "rgba(8, 8, 8, 0.4)", backdropFilter: "blur(24px)", WebkitBackdropFilter: "blur(24px)",
+        background: C.surface,
         position: "sticky", top: 0, zIndex: 10
       }}>
       <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-        <span style={{ fontSize: "12px", letterSpacing: "1px", textTransform: "uppercase", color: C.muted }}>Administration</span>
-        <span style={{ color: C.mutedLight }}>/</span>
-        <span style={{ fontSize: "12px", letterSpacing: "1px", textTransform: "uppercase", color: C.white, fontWeight: 500 }}>User Management</span>
+        <span style={{ fontSize: "12px", letterSpacing: "1px", textTransform: "uppercase", color: C.textHint, fontWeight: 600 }}>Administration</span>
+        <span style={{ color: C.textMuted }}>/</span>
+        <span style={{ fontSize: "12px", letterSpacing: "1px", textTransform: "uppercase", color: C.textHeading, fontWeight: 600 }}>User Management</span>
       </div>
       <div style={{ display: "flex", alignItems: "center", gap: "24px" }}>
-        <span style={{ fontSize: "12px", color: C.mutedLight }}>
-          Welcome, <span style={{ color: C.offWhite, fontWeight: 500 }}>support@jbrstaffingsolutions.ca</span>
+        <span style={{ fontSize: "13px", color: C.textMuted }}>
+          Welcome, <span style={{ color: C.textHeading, fontWeight: 600 }}>support@jbrstaffingsolutions.ca</span>
         </span>
         <motion.button 
-          whileHover={{ scale: 1.02, backgroundColor: "rgba(198,40,40,0.1)", borderColor: C.red, color: C.red }} whileTap={{ scale: 0.98 }}
-          style={{ display: "flex", alignItems: "center", gap: "8px", padding: "8px 16px", background: "transparent", border: `1px solid ${C.border}`, borderRadius: "6px", color: C.offWhite, fontSize: "12px", fontWeight: 500, cursor: "pointer", transition: "all 0.2s ease" }}>
-          Sign Out <LogOut size={14} />
+          whileHover={{ backgroundColor: C.redActiveBg, borderColor: C.red, color: C.red }} whileTap={{ scale: 0.98 }}
+          style={{ display: "flex", alignItems: "center", gap: "8px", padding: "8px 16px", background: "transparent", border: `1px solid ${C.border}`, borderRadius: "6px", color: C.textLabel, fontSize: "13px", fontWeight: 600, cursor: "pointer", transition: "all 0.2s ease" }}>
+          Sign Out <LogOut size={16} />
         </motion.button>
       </div>
     </motion.header>
@@ -121,7 +131,7 @@ function FormField({ label, placeholder, type = "text", autoFocus = false }: { l
   const [focused, setFocused] = useState(autoFocus);
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "8px", flex: 1 }}>
-      <label style={{ fontSize: "11px", fontWeight: 500, color: C.mutedLight }}>{label}</label>
+      <label style={{ fontSize: "12px", fontWeight: 600, color: C.textLabel }}>{label}</label>
       <div style={{ position: "relative" }}>
         <input 
           type={type} 
@@ -131,11 +141,10 @@ function FormField({ label, placeholder, type = "text", autoFocus = false }: { l
           onBlur={() => setFocused(false)}
           style={{
             width: "100%", padding: "12px 16px",
-            background: "rgba(255,255,255,0.02)",
+            background: C.inputBg,
             border: `1px solid ${focused ? C.red : C.border}`,
-            borderRadius: "8px", color: C.white, fontSize: "13px",
+            borderRadius: "8px", color: C.textBody, fontSize: "14px",
             outline: "none", transition: "all 0.2s ease",
-            boxShadow: focused ? `0 0 0 3px ${C.redGlow}` : "none"
           }}
         />
       </div>
@@ -148,23 +157,22 @@ function FormSelect({ label, options }: { label: string, options: string[] }) {
   const [focused, setFocused] = useState(false);
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "8px", flex: 1 }}>
-      <label style={{ fontSize: "11px", fontWeight: 500, color: C.mutedLight }}>{label}</label>
+      <label style={{ fontSize: "12px", fontWeight: 600, color: C.textLabel }}>{label}</label>
       <div style={{ position: "relative" }}>
         <select 
           onFocus={() => setFocused(true)}
           onBlur={() => setFocused(false)}
           style={{
             width: "100%", padding: "12px 36px 12px 16px",
-            background: "rgba(255,255,255,0.02)",
+            background: C.inputBg,
             border: `1px solid ${focused ? C.red : C.border}`,
-            borderRadius: "8px", color: C.white, fontSize: "13px",
+            borderRadius: "8px", color: C.textBody, fontSize: "14px",
             outline: "none", transition: "all 0.2s ease",
-            boxShadow: focused ? `0 0 0 3px ${C.redGlow}` : "none"
           }}
         >
           {options.map(opt => <option key={opt}>{opt}</option>)}
         </select>
-        <ChevronDown size={16} color={C.muted} style={{ position: "absolute", right: "12px", top: "50%", transform: "translateY(-50%)", pointerEvents: "none" }} />
+        <ChevronDown size={16} color={C.textHint} style={{ position: "absolute", right: "12px", top: "50%", transform: "translateY(-50%)", pointerEvents: "none" }} />
       </div>
     </div>
   );
@@ -180,7 +188,7 @@ function ToggleSwitch({ label }: { label: string }) {
         onClick={() => setIsOn(!isOn)}
         style={{
           width: "44px", height: "24px", borderRadius: "12px",
-          background: isOn ? C.emerald : "rgba(255,255,255,0.1)",
+          background: isOn ? C.successText : C.borderHover,
           position: "relative", cursor: "pointer", transition: "background 0.3s ease"
         }}
       >
@@ -191,11 +199,11 @@ function ToggleSwitch({ label }: { label: string }) {
           style={{
             width: "20px", height: "20px", borderRadius: "50%",
             background: C.white, position: "absolute", top: "2px",
-            boxShadow: "0 2px 5px rgba(0,0,0,0.2)"
+            boxShadow: "0 1px 3px rgba(0,0,0,0.2)"
           }}
         />
       </div>
-      <span style={{ fontSize: "13px", color: C.offWhite, fontWeight: 500 }}>{label}</span>
+      <span style={{ fontSize: "14px", color: C.textBody, fontWeight: 500 }}>{label}</span>
     </div>
   );
 }
@@ -212,17 +220,14 @@ export default function UserManagementPage() {
   return (
     <>
       <style>{GLOBAL_CSS}</style>
-      <AmbientBackground />
       
       <div style={{ display: "flex", height: "100vh", overflow: "hidden" }}>
         
-        {/* Extracted Reusable Sidebar */}
         <Sidebar 
           isCollapsed={isSidebarCollapsed} setCollapsed={setSidebarCollapsed} 
           activeTab={activeTab} setActiveTab={setActiveTab} 
         />
 
-        {/* Right Scrollable Content */}
         <div style={{ flex: 1, display: "flex", flexDirection: "column", overflowY: "auto", position: "relative" }}>
           <TopNav />
 
@@ -234,38 +239,38 @@ export default function UserManagementPage() {
               style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", flexWrap: "wrap", gap: "16px" }}
             >
               <div>
-                <h1 style={{ display: "flex", alignItems: "center", gap: "12px", fontFamily: "'Cormorant Garamond', serif", fontSize: "42px", fontWeight: 600, color: C.white, marginBottom: "8px", letterSpacing: "-0.5px" }}>
-                  <UserCog size={32} color={C.red} strokeWidth={1.5} /> User Management
+                <h1 style={{ display: "flex", alignItems: "center", gap: "12px", fontFamily: "'Cormorant Garamond', serif", fontSize: "42px", fontWeight: 600, color: C.textHeading, marginBottom: "8px", letterSpacing: "-0.5px" }}>
+                  <UserCog size={32} color={C.red} strokeWidth={2} /> User Management
                 </h1>
-                <p style={{ fontSize: "14px", color: C.mutedLight }}>
+                <p style={{ fontSize: "15px", color: C.textMuted }}>
                   Manage users and their roles in the system.
                 </p>
               </div>
               
               <motion.button 
                 onClick={() => setModalOpen(true)}
-                whileHover={{ y: -2, boxShadow: `0 10px 20px ${C.redGlowStrong}` }} whileTap={{ scale: 0.98 }}
+                whileHover={{ y: -2, boxShadow: `0 4px 16px ${C.redGlow}` }} whileTap={{ scale: 0.98 }}
                 style={{
                   display: "flex", alignItems: "center", gap: "8px", padding: "12px 24px",
                   background: `linear-gradient(135deg, ${C.redBright}, ${C.red})`,
-                  border: `1px solid rgba(255,100,100,0.3)`, borderRadius: "8px",
-                  color: C.white, fontSize: "13px", fontWeight: 600, letterSpacing: "0.5px",
-                  cursor: "pointer", position: "relative", overflow: "hidden"
+                  border: "none", borderRadius: "8px",
+                  color: C.white, fontSize: "14px", fontWeight: 600, letterSpacing: "0.5px",
+                  cursor: "pointer", position: "relative", overflow: "hidden",
+                  boxShadow: `0 2px 8px ${C.redGlow}`
                 }}
               >
-                <div style={{ position: "absolute", inset: 0, background: "linear-gradient(105deg, transparent 20%, rgba(255,255,255,0.15) 50%, transparent 80%)", backgroundSize: "300px 100%", animation: "shimmer 2.5s infinite" }} />
                 <Plus size={18} style={{ position: "relative", zIndex: 1 }} />
                 <span style={{ position: "relative", zIndex: 1 }}>Add User</span>
               </motion.button>
             </motion.div>
 
             {/* Data Table Section */}
-            <motion.div variants={containerVars} initial="hidden" animate="show" className="glass-card" style={{ display: "flex", flexDirection: "column", overflow: "hidden" }}>
+            <motion.div variants={containerVars} initial="hidden" animate="show" className="clean-card" style={{ display: "flex", flexDirection: "column", overflow: "hidden" }}>
               
               {/* Table Header Controls */}
               <div style={{ padding: "24px 32px", borderBottom: `1px solid ${C.border}` }}>
-                <h3 style={{ fontSize: "20px", fontWeight: 600, color: C.white }}>Users</h3>
-                <p style={{ fontSize: "12px", color: C.mutedLight, marginTop: "4px" }}>
+                <h3 style={{ fontSize: "20px", fontWeight: 600, color: C.textHeading }}>Users</h3>
+                <p style={{ fontSize: "13px", color: C.textMuted, marginTop: "4px" }}>
                   Manage system users and their access levels
                 </p>
               </div>
@@ -275,9 +280,9 @@ export default function UserManagementPage() {
                 <div className="table-min-width">
                   
                   {/* Table Column Headers */}
-                  <div style={{ display: "grid", gridTemplateColumns: tableGridTemplate, padding: "16px 32px", borderBottom: `1px solid ${C.border}`, background: "rgba(0,0,0,0.2)", alignItems: "center" }}>
+                  <div style={{ display: "grid", gridTemplateColumns: tableGridTemplate, padding: "16px 32px", borderBottom: `1px solid ${C.border}`, background: C.inputBg, alignItems: "center" }}>
                     {["Name", "Email", "Role", "Status", "Last Login", "Actions"].map((head, i) => (
-                      <span key={i} style={{ fontSize: "11px", textTransform: "uppercase", letterSpacing: "1px", color: C.mutedLight, fontWeight: 500 }}>{head}</span>
+                      <span key={i} style={{ fontSize: "11px", textTransform: "uppercase", letterSpacing: "1px", color: C.textHint, fontWeight: 600 }}>{head}</span>
                     ))}
                   </div>
 
@@ -285,11 +290,12 @@ export default function UserManagementPage() {
                   <div style={{ display: "flex", flexDirection: "column" }}>
                     {USERS_DATA.map((user, idx) => {
                       const roleStyle = getRoleBadgeStyle(user.role);
+                      const isActive = user.status.toLowerCase() === "active";
                       
                       return (
                         <motion.div 
                           key={user.id} variants={itemVars}
-                          whileHover={{ backgroundColor: "rgba(255,255,255,0.02)" }}
+                          whileHover={{ backgroundColor: C.inputBg }}
                           style={{ 
                             display: "grid", gridTemplateColumns: tableGridTemplate, alignItems: "center",
                             padding: "20px 32px", borderBottom: idx !== USERS_DATA.length - 1 ? `1px solid ${C.border}` : "none",
@@ -297,41 +303,41 @@ export default function UserManagementPage() {
                           }}
                         >
                           {/* Name */}
-                          <div style={{ fontSize: "14px", fontWeight: 500, color: C.white }}>
-                            {user.name || <span style={{ color: C.muted, fontStyle: "italic" }}>Not provided</span>}
+                          <div style={{ fontSize: "15px", fontWeight: 600, color: C.textHeading }}>
+                            {user.name || <span style={{ color: C.textHint, fontStyle: "italic", fontWeight: 500 }}>Not provided</span>}
                           </div>
                           
                           {/* Email */}
-                          <div style={{ fontSize: "13px", color: C.mutedLight, wordBreak: "break-all", paddingRight: "16px" }}>
+                          <div style={{ fontSize: "14px", color: C.textMuted, wordBreak: "break-all", paddingRight: "16px" }}>
                             {user.email}
                           </div>
                           
                           {/* Role Badge */}
                           <div>
-                            <div style={{ display: "inline-flex", alignItems: "center", padding: "4px 12px", borderRadius: "20px", background: roleStyle.bg, border: `1px solid ${roleStyle.border}`, color: roleStyle.color, fontSize: "10px", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.5px" }}>
+                            <div style={{ display: "inline-flex", alignItems: "center", padding: "6px 12px", borderRadius: "20px", background: roleStyle.bg, color: roleStyle.color, fontSize: "11px", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.5px" }}>
                               {user.role}
                             </div>
                           </div>
 
                           {/* Status Badge */}
                           <div>
-                            <div style={{ display: "inline-flex", alignItems: "center", padding: "4px 12px", borderRadius: "20px", background: "rgba(255,255,255,0.1)", border: `1px solid rgba(255,255,255,0.15)`, color: C.white, fontSize: "10px", fontWeight: 600, textTransform: "capitalize", letterSpacing: "0.5px" }}>
+                            <div style={{ display: "inline-flex", alignItems: "center", padding: "6px 12px", borderRadius: "20px", background: isActive ? C.successBg : C.alertBg, color: isActive ? C.successText : C.alertText, fontSize: "11px", fontWeight: 600, textTransform: "capitalize", letterSpacing: "0.5px" }}>
                               {user.status}
                             </div>
                           </div>
 
                           {/* Last Login */}
-                          <div style={{ fontSize: "13px", color: C.mutedLight }}>
+                          <div style={{ fontSize: "14px", color: C.textMuted }}>
                             {user.lastLogin}
                           </div>
 
                           {/* Actions */}
                           <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                            <motion.button whileHover={{ scale: 1.1, color: C.white, borderColor: C.borderHover }} whileTap={{ scale: 0.9 }} style={{ background: "rgba(255,255,255,0.02)", border: `1px solid ${C.border}`, borderRadius: "6px", color: C.mutedLight, cursor: "pointer", padding: "6px", display: "flex" }}>
-                              <Edit2 size={14} />
+                            <motion.button whileHover={{ scale: 1.1, backgroundColor: C.redActiveBg, color: C.red, borderColor: C.red }} whileTap={{ scale: 0.9 }} style={{ background: "transparent", border: `1px solid ${C.border}`, borderRadius: "6px", color: C.textHint, cursor: "pointer", padding: "8px", display: "flex", transition: "all 0.2s" }}>
+                              <Edit2 size={16} />
                             </motion.button>
-                            <motion.button whileHover={{ scale: 1.1, color: C.redBright, borderColor: C.borderHover }} whileTap={{ scale: 0.9 }} style={{ background: "rgba(255,255,255,0.02)", border: `1px solid ${C.border}`, borderRadius: "6px", color: C.mutedLight, cursor: "pointer", padding: "6px", display: "flex" }}>
-                              <Trash2 size={14} />
+                            <motion.button whileHover={{ scale: 1.1, backgroundColor: C.redActiveBg, color: C.redBright, borderColor: C.redBright }} whileTap={{ scale: 0.9 }} style={{ background: "transparent", border: `1px solid ${C.border}`, borderRadius: "6px", color: C.textHint, cursor: "pointer", padding: "8px", display: "flex", transition: "all 0.2s" }}>
+                              <Trash2 size={16} />
                             </motion.button>
                           </div>
 
@@ -357,7 +363,7 @@ export default function UserManagementPage() {
             {/* Backdrop */}
             <motion.div 
               initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.3 }}
-              style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.6)", backdropFilter: "blur(8px)", WebkitBackdropFilter: "blur(8px)" }}
+              style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.4)" }}
               onClick={() => setModalOpen(false)}
             />
 
@@ -366,24 +372,24 @@ export default function UserManagementPage() {
               initial={{ opacity: 0, scale: 0.95, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95, y: 20 }} transition={{ duration: 0.4, type: "spring", bounce: 0.3 }}
               style={{ 
                 position: "relative", width: "100%", maxWidth: "560px", margin: "24px",
-                background: "linear-gradient(145deg, rgba(22,22,22,0.95), rgba(15,15,15,0.98))",
-                border: `1px solid rgba(255,255,255,0.08)`, borderRadius: "20px",
-                boxShadow: "0 25px 50px -12px rgba(0,0,0,0.7), inset 0 1px 0 rgba(255,255,255,0.05)"
+                background: C.surface,
+                border: `1px solid ${C.border}`, borderRadius: "20px",
+                boxShadow: `0 4px 16px ${C.shadowMd}`
               }}
             >
               {/* Close Button */}
               <button 
                 onClick={() => setModalOpen(false)}
-                style={{ position: "absolute", right: "24px", top: "24px", background: "transparent", border: "none", color: C.muted, cursor: "pointer", transition: "color 0.2s" }}
-                onMouseEnter={(e) => e.currentTarget.style.color = C.white}
-                onMouseLeave={(e) => e.currentTarget.style.color = C.muted}
+                style={{ position: "absolute", right: "24px", top: "24px", background: "transparent", border: "none", color: C.textHint, cursor: "pointer", transition: "color 0.2s" }}
+                onMouseEnter={(e) => e.currentTarget.style.color = C.textHeading}
+                onMouseLeave={(e) => e.currentTarget.style.color = C.textHint}
               >
-                <X size={20} />
+                <X size={24} />
               </button>
 
               <div style={{ padding: "32px 32px 24px" }}>
-                <h2 style={{ fontSize: "22px", fontWeight: 600, color: C.white, marginBottom: "8px", fontFamily: "'DM Sans', sans-serif" }}>Create User</h2>
-                <p style={{ fontSize: "13px", color: C.mutedLight }}>Create a new user account.</p>
+                <h2 style={{ fontSize: "24px", fontWeight: 600, color: C.textHeading, marginBottom: "8px", fontFamily: "'DM Sans', sans-serif" }}>Create User</h2>
+                <p style={{ fontSize: "14px", color: C.textMuted }}>Create a new user account.</p>
               </div>
 
               <div style={{ padding: "0 32px 32px", display: "flex", flexDirection: "column", gap: "20px" }}>
@@ -404,22 +410,22 @@ export default function UserManagementPage() {
                 {/* Footer Buttons */}
                 <div style={{ display: "flex", justifyContent: "flex-end", gap: "12px", marginTop: "16px" }}>
                   <motion.button 
-                    whileHover={{ backgroundColor: "rgba(255,255,255,0.08)" }} whileTap={{ scale: 0.98 }}
+                    whileHover={{ backgroundColor: C.inputBg, color: C.red, borderColor: C.red }} whileTap={{ scale: 0.98 }}
                     onClick={() => setModalOpen(false)}
                     style={{
-                      padding: "10px 20px", background: "rgba(255,255,255,0.03)", border: `1px solid ${C.border}`, 
-                      borderRadius: "8px", color: C.offWhite, fontSize: "13px", fontWeight: 500, cursor: "pointer"
+                      padding: "10px 20px", background: "transparent", border: `1px solid ${C.border}`, 
+                      borderRadius: "8px", color: C.textLabel, fontSize: "14px", fontWeight: 600, cursor: "pointer", transition: "all 0.2s"
                     }}
                   >
                     Cancel
                   </motion.button>
                   <motion.button 
-                    whileHover={{ y: -1, boxShadow: `0 8px 16px ${C.redGlowStrong}` }} whileTap={{ scale: 0.98 }}
+                    whileHover={{ y: -1, boxShadow: `0 4px 16px ${C.redGlow}` }} whileTap={{ scale: 0.98 }}
                     onClick={() => setModalOpen(false)}
                     style={{
                       padding: "10px 24px", background: `linear-gradient(135deg, ${C.redBright}, ${C.red})`, 
-                      border: `1px solid rgba(255,100,100,0.3)`, borderRadius: "8px", color: C.white, 
-                      fontSize: "13px", fontWeight: 600, cursor: "pointer"
+                      border: "none", borderRadius: "8px", color: C.white, 
+                      fontSize: "14px", fontWeight: 600, cursor: "pointer", boxShadow: `0 2px 8px ${C.redGlow}`
                     }}
                   >
                     Create

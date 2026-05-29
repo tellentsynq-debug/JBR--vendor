@@ -3,32 +3,51 @@
 import React, { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { LogOut, Plus, Search, Copy, Check, Edit2, EyeOff, X, Calendar as CalendarIcon } from "lucide-react";
-import Sidebar, { C } from "../components/Sidebar";
+import Sidebar from "../components/Sidebar";
+
+/* ─── DESIGN TOKENS ─────────────────────────────────────────── */
+const C = {
+  bg: "#F0F2F5",
+  surface: "#FFFFFF",
+  border: "rgba(0,0,0,0.07)",
+  borderHover: "rgba(0,0,0,0.14)",
+  textHeading: "#111111",
+  textBody: "#1A1A1A",
+  textLabel: "#374151",
+  textMuted: "#6B7280",
+  textHint: "#9BA3AF",
+  red: "#C62828",
+  redBright: "#E53935",
+  redGlow: "rgba(229,57,53,0.20)",
+  redActiveBg: "rgba(198,40,40,0.08)",
+  inputBg: "#F4F6F8",
+  white: "#FFFFFF",
+  successBg: "rgba(5,150,105,0.10)",
+  successText: "#059669",
+  pendingBg: "rgba(59,130,246,0.08)",
+  pendingBorder: "rgba(59,130,246,0.2)",
+  pendingText: "#3B82F6",
+  alertBg: "rgba(198,40,40,0.08)",
+  alertText: "#C62828",
+};
 
 /* ─── GLOBAL CSS & ANIMATIONS ────────────────────────────────── */
 const GLOBAL_CSS = `
   @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;500;600;700&family=DM+Sans:wght@300;400;500;600;700&display=swap');
 
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-  body { background: ${C.bg}; color: ${C.offWhite}; font-family: 'DM Sans', sans-serif; overflow-x: hidden; }
+  body { background: ${C.bg}; color: ${C.textBody}; font-family: 'DM Sans', sans-serif; overflow-x: hidden; }
 
   ::-webkit-scrollbar { width: 8px; height: 8px; }
   ::-webkit-scrollbar-track { background: ${C.bg}; }
   ::-webkit-scrollbar-thumb { background: ${C.borderHover}; border-radius: 4px; }
-  ::-webkit-scrollbar-thumb:hover { background: ${C.muted}; }
+  ::-webkit-scrollbar-thumb:hover { background: rgba(0,0,0,0.25); }
 
-  @keyframes shimmer {
-    0%   { background-position: -400px 0; }
-    100% { background-position:  400px 0; }
-  }
-
-  .glass-card {
-    background: linear-gradient(145deg, rgba(17,17,17,0.9), rgba(12,12,12,0.95));
+  .clean-card {
+    background: ${C.surface};
     border: 1px solid ${C.border};
     border-radius: 16px;
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
-    box-shadow: 0 10px 30px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.02);
+    box-shadow: 0 1px 3px rgba(0,0,0,0.06), 0 4px 16px rgba(0,0,0,0.06);
   }
 
   .table-container {
@@ -39,11 +58,9 @@ const GLOBAL_CSS = `
     min-width: 1000px;
   }
   
-  /* Reset Date Input Icon color for dark mode */
   input[type="date"]::-webkit-calendar-picker-indicator {
-    filter: invert(1);
-    opacity: 0.5;
     cursor: pointer;
+    opacity: 0.6;
   }
 `;
 
@@ -62,17 +79,6 @@ const itemVars = { hidden: { opacity: 0, y: 15 }, show: { opacity: 1, y: 0, tran
 
 /* ─── COMPONENTS ─────────────────────────────────────────────── */
 
-function AmbientBackground() {
-  return (
-    <div style={{ position: "fixed", inset: 0, zIndex: -1, pointerEvents: "none", overflow: "hidden" }}>
-      <div style={{ position: "absolute", inset: 0, background: `radial-gradient(circle at 50% 0%, ${C.surface} 0%, ${C.bg} 80%)` }} />
-      <div style={{ position: "absolute", top: "-10%", left: "-10%", width: "50vw", height: "50vw", background: `radial-gradient(circle, ${C.redGlow} 0%, transparent 60%)`, filter: "blur(100px)", opacity: 0.4 }} />
-      <div style={{ position: "absolute", bottom: "-20%", right: "-10%", width: "60vw", height: "60vw", background: `radial-gradient(circle, ${C.goldDim} 0%, transparent 60%)`, filter: "blur(120px)", opacity: 0.3 }} />
-      <div style={{ position: "absolute", inset: 0, backgroundImage: `linear-gradient(${C.border} 1px, transparent 1px), linear-gradient(90deg, ${C.border} 1px, transparent 1px)`, backgroundSize: "60px 60px", opacity: 0.3, maskImage: "linear-gradient(to bottom, black 20%, transparent 80%)", WebkitMaskImage: "linear-gradient(to bottom, black 20%, transparent 80%)" }} />
-    </div>
-  );
-}
-
 function TopNav() {
   return (
     <motion.header 
@@ -80,22 +86,22 @@ function TopNav() {
       style={{
         display: "flex", justifyContent: "space-between", alignItems: "center",
         padding: "20px 40px", borderBottom: `1px solid ${C.border}`,
-        background: "rgba(8, 8, 8, 0.4)", backdropFilter: "blur(24px)", WebkitBackdropFilter: "blur(24px)",
+        background: C.surface,
         position: "sticky", top: 0, zIndex: 10
       }}>
       
       <div style={{ display: "flex", alignItems: "center" }}>
-        <span style={{ fontSize: "12px", letterSpacing: "1px", textTransform: "uppercase", color: C.white, fontWeight: 500 }}>Campaign Link</span>
+        <span style={{ fontSize: "12px", letterSpacing: "1px", textTransform: "uppercase", color: C.textHeading, fontWeight: 600 }}>Campaign Link</span>
       </div>
       
       <div style={{ display: "flex", alignItems: "center", gap: "24px" }}>
-        <span style={{ fontSize: "12px", color: C.mutedLight }}>
-          Welcome, <span style={{ color: C.offWhite, fontWeight: 500 }}>support@jbrstaffingsolutions.ca</span>
+        <span style={{ fontSize: "13px", color: C.textMuted }}>
+          Welcome, <span style={{ color: C.textHeading, fontWeight: 500 }}>support@jbrstaffingsolutions.ca</span>
         </span>
         <motion.button 
-          whileHover={{ scale: 1.02, backgroundColor: "rgba(198,40,40,0.1)", borderColor: C.red, color: C.red }} whileTap={{ scale: 0.98 }}
-          style={{ display: "flex", alignItems: "center", gap: "8px", padding: "8px 16px", background: "transparent", border: `1px solid ${C.border}`, borderRadius: "6px", color: C.offWhite, fontSize: "12px", fontWeight: 500, cursor: "pointer", transition: "all 0.2s ease" }}>
-          Sign Out <LogOut size={14} />
+          whileHover={{ backgroundColor: C.redActiveBg, borderColor: C.red, color: C.red }} whileTap={{ scale: 0.98 }}
+          style={{ display: "flex", alignItems: "center", gap: "8px", padding: "8px 16px", background: "transparent", border: `1px solid ${C.border}`, borderRadius: "6px", color: C.textLabel, fontSize: "13px", fontWeight: 500, cursor: "pointer", transition: "all 0.2s ease" }}>
+          Sign Out <LogOut size={16} />
         </motion.button>
       </div>
     </motion.header>
@@ -113,18 +119,19 @@ function CopyLinkButton() {
   return (
     <motion.button
       onClick={handleCopy}
-      whileHover={{ scale: 1.05, backgroundColor: "rgba(255,255,255,0.08)" }}
+      whileHover={copied ? {} : { backgroundColor: C.redActiveBg, borderColor: C.red, color: C.red }}
       whileTap={{ scale: 0.95 }}
       style={{
         display: "flex", alignItems: "center", gap: "6px", padding: "6px 12px",
-        background: "rgba(255,255,255,0.03)", border: `1px solid ${C.border}`,
+        background: copied ? C.successBg : "transparent",
+        border: copied ? `1px solid transparent` : `1px solid ${C.border}`,
         borderRadius: "6px", cursor: "pointer",
-        color: copied ? C.emerald : C.white,
-        transition: "color 0.2s ease"
+        color: copied ? C.successText : C.textLabel,
+        transition: "all 0.2s ease"
       }}
     >
       {copied ? <Check size={14} /> : <Copy size={14} />}
-      <span style={{ fontSize: "12px", fontWeight: 500 }}>{copied ? "Copied!" : "Copy Link"}</span>
+      <span style={{ fontSize: "12px", fontWeight: 600 }}>{copied ? "Copied!" : "Copy Link"}</span>
     </motion.button>
   );
 }
@@ -134,7 +141,7 @@ function FormField({ label, placeholder, isDate = false }: { label: string, plac
   const [focused, setFocused] = useState(false);
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "8px", flex: 1 }}>
-      <label style={{ fontSize: "11px", fontWeight: 500, color: C.mutedLight }}>{label}</label>
+      <label style={{ fontSize: "12px", fontWeight: 600, color: C.textLabel }}>{label}</label>
       <div style={{ position: "relative" }}>
         <input 
           type={isDate ? "date" : "text"} 
@@ -143,15 +150,13 @@ function FormField({ label, placeholder, isDate = false }: { label: string, plac
           onBlur={() => setFocused(false)}
           style={{
             width: "100%", padding: "12px 16px",
-            background: "rgba(255,255,255,0.02)",
+            background: C.inputBg,
             border: `1px solid ${focused ? C.red : C.border}`,
-            borderRadius: "8px", color: C.white, fontSize: "13px",
+            borderRadius: "8px", color: C.textBody, fontSize: "14px",
             outline: "none", transition: "all 0.2s ease",
-            boxShadow: focused ? `0 0 0 3px ${C.redGlow}` : "none"
           }}
         />
-        {isDate && <CalendarIcon size={14} color={C.muted} style={{ position: "absolute", left: "16px", top: "50%", transform: "translateY(-50%)", pointerEvents: "none", opacity: 0 }} />} 
-        {/* Note: Native date inputs have their own icon on the right in webkit, so we just style the native one in GLOBAL_CSS */}
+        {isDate && <CalendarIcon size={16} color={C.textHint} style={{ position: "absolute", left: "16px", top: "50%", transform: "translateY(-50%)", pointerEvents: "none", opacity: 0 }} />} 
       </div>
     </div>
   );
@@ -168,8 +173,7 @@ export default function CampaignsPage() {
   return (
     <>
       <style>{GLOBAL_CSS}</style>
-      <AmbientBackground />
-      
+
       <div style={{ display: "flex", height: "100vh", overflow: "hidden" }}>
         
         <Sidebar 
@@ -187,43 +191,43 @@ export default function CampaignsPage() {
               style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", flexWrap: "wrap", gap: "16px" }}
             >
               <div>
-                <h1 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: "42px", fontWeight: 600, color: C.white, marginBottom: "8px", letterSpacing: "-0.5px" }}>
+                <h1 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: "42px", fontWeight: 600, color: C.textHeading, marginBottom: "8px", letterSpacing: "-0.5px" }}>
                   Campaigns
                 </h1>
-                <p style={{ fontSize: "14px", color: C.mutedLight }}>
+                <p style={{ fontSize: "15px", color: C.textMuted }}>
                   Create and manage recruitment campaigns
                 </p>
               </div>
               
               <motion.button 
                 onClick={() => setModalOpen(true)}
-                whileHover={{ y: -2, boxShadow: `0 10px 20px ${C.redGlowStrong}` }} whileTap={{ scale: 0.98 }}
+                whileHover={{ y: -2, boxShadow: `0 8px 24px ${C.redGlow}` }} whileTap={{ scale: 0.98 }}
                 style={{
                   display: "flex", alignItems: "center", gap: "8px", padding: "12px 24px",
                   background: `linear-gradient(135deg, ${C.redBright}, ${C.red})`,
-                  border: `1px solid rgba(255,100,100,0.3)`, borderRadius: "8px",
-                  color: C.white, fontSize: "13px", fontWeight: 600, letterSpacing: "0.5px",
-                  cursor: "pointer", position: "relative", overflow: "hidden"
+                  border: "none", borderRadius: "8px",
+                  color: C.white, fontSize: "14px", fontWeight: 600, letterSpacing: "0.5px",
+                  cursor: "pointer", position: "relative", overflow: "hidden",
+                  boxShadow: `0 4px 16px ${C.redGlow}`
                 }}
               >
-                <div style={{ position: "absolute", inset: 0, background: "linear-gradient(105deg, transparent 20%, rgba(255,255,255,0.15) 50%, transparent 80%)", backgroundSize: "300px 100%", animation: "shimmer 2.5s infinite" }} />
                 <Plus size={18} style={{ position: "relative", zIndex: 1 }} />
                 <span style={{ position: "relative", zIndex: 1 }}>Create Campaign</span>
               </motion.button>
             </motion.div>
 
-            <motion.div variants={containerVars} initial="hidden" animate="show" className="glass-card" style={{ display: "flex", flexDirection: "column", overflow: "hidden" }}>
+            <motion.div variants={containerVars} initial="hidden" animate="show" className="clean-card" style={{ display: "flex", flexDirection: "column", overflow: "hidden" }}>
               
               <div style={{ padding: "24px 32px", borderBottom: `1px solid ${C.border}`, display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "16px" }}>
-                <h3 style={{ fontSize: "20px", fontWeight: 600, color: C.white }}>Campaign List</h3>
+                <h3 style={{ fontSize: "20px", fontWeight: 600, color: C.textHeading }}>Campaign List</h3>
                 
                 <div style={{ position: "relative" }}>
-                  <Search size={16} color={C.muted} style={{ position: "absolute", left: "12px", top: "50%", transform: "translateY(-50%)" }} />
+                  <Search size={16} color={C.textHint} style={{ position: "absolute", left: "14px", top: "50%", transform: "translateY(-50%)" }} />
                   <input 
                     type="text" placeholder="Search campaigns..." 
                     style={{
-                      background: "rgba(255,255,255,0.03)", border: `1px solid ${C.border}`, borderRadius: "8px",
-                      padding: "8px 16px 8px 36px", color: C.white, fontSize: "13px", width: "240px", outline: "none",
+                      background: C.inputBg, border: `1px solid ${C.border}`, borderRadius: "8px",
+                      padding: "10px 16px 10px 40px", color: C.textBody, fontSize: "14px", width: "260px", outline: "none",
                       transition: "border-color 0.2s"
                     }}
                     onFocus={(e) => e.target.style.borderColor = C.red}
@@ -235,9 +239,9 @@ export default function CampaignsPage() {
               <div className="table-container">
                 <div className="table-min-width">
                   
-                  <div style={{ display: "grid", gridTemplateColumns: tableGridTemplate, padding: "16px 32px", borderBottom: `1px solid ${C.border}`, background: "rgba(0,0,0,0.2)" }}>
+                  <div style={{ display: "grid", gridTemplateColumns: tableGridTemplate, padding: "16px 32px", borderBottom: `1px solid ${C.border}`, background: C.inputBg }}>
                     {["Name", "Start Date", "End Date", "Status", "Link", "Actions"].map((head, i) => (
-                      <span key={i} style={{ fontSize: "11px", textTransform: "uppercase", letterSpacing: "1px", color: C.mutedLight, fontWeight: 500 }}>
+                      <span key={i} style={{ fontSize: "11px", textTransform: "uppercase", letterSpacing: "1px", color: C.textHint, fontWeight: 600 }}>
                         {head}
                       </span>
                     ))}
@@ -247,28 +251,28 @@ export default function CampaignsPage() {
                     {CAMPAIGNS_DATA.map((camp, idx) => (
                       <motion.div 
                         key={camp.id} variants={itemVars}
-                        whileHover={{ backgroundColor: "rgba(255,255,255,0.02)" }}
+                        whileHover={{ backgroundColor: C.inputBg }}
                         style={{ 
                           display: "grid", gridTemplateColumns: tableGridTemplate, alignItems: "center",
                           padding: "20px 32px", borderBottom: idx !== CAMPAIGNS_DATA.length - 1 ? `1px solid ${C.border}` : "none",
                           transition: "background-color 0.2s ease"
                         }}
                       >
-                        <div style={{ fontSize: "14px", fontWeight: 500, color: C.white }}>{camp.name}</div>
-                        <div style={{ fontSize: "13px", color: C.mutedLight }}>{camp.start}</div>
-                        <div style={{ fontSize: "13px", color: C.mutedLight }}>{camp.end}</div>
+                        <div style={{ fontSize: "15px", fontWeight: 600, color: C.textHeading }}>{camp.name}</div>
+                        <div style={{ fontSize: "14px", color: C.textMuted }}>{camp.start}</div>
+                        <div style={{ fontSize: "14px", color: C.textMuted }}>{camp.end}</div>
                         
                         <div>
                           {camp.status === "Active" ? (
-                            <div style={{ display: "inline-flex", alignItems: "center", gap: "6px", padding: "4px 12px", borderRadius: "20px", background: "rgba(229,57,53,0.1)", border: `1px solid rgba(229,57,53,0.2)`, color: C.redBright, fontSize: "11px", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.5px" }}>
-                              <div style={{ width: "6px", height: "6px", borderRadius: "50%", background: C.redBright, boxShadow: `0 0 8px ${C.redBright}` }} /> Active
+                            <div style={{ display: "inline-flex", alignItems: "center", gap: "6px", padding: "6px 12px", borderRadius: "20px", background: C.successBg, color: C.successText, fontSize: "11px", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.5px" }}>
+                              <div style={{ width: "6px", height: "6px", borderRadius: "50%", background: C.successText }} /> Active
                             </div>
                           ) : camp.status === "Ended" ? (
-                            <div style={{ display: "inline-flex", alignItems: "center", padding: "4px 12px", borderRadius: "20px", background: "rgba(255,255,255,0.05)", border: `1px solid ${C.border}`, color: C.muted, fontSize: "11px", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.5px" }}>
+                            <div style={{ display: "inline-flex", alignItems: "center", padding: "6px 12px", borderRadius: "20px", background: C.alertBg, color: C.alertText, fontSize: "11px", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.5px" }}>
                               Ended
                             </div>
                           ) : (
-                            <div style={{ display: "inline-flex", alignItems: "center", padding: "4px 12px", borderRadius: "20px", background: C.goldDim, border: `1px solid rgba(191,164,106,0.3)`, color: C.gold, fontSize: "11px", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.5px" }}>
+                            <div style={{ display: "inline-flex", alignItems: "center", padding: "6px 12px", borderRadius: "20px", background: C.pendingBg, border: `1px solid ${C.pendingBorder}`, color: C.pendingText, fontSize: "11px", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.5px" }}>
                               Draft
                             </div>
                           )}
@@ -277,19 +281,22 @@ export default function CampaignsPage() {
                         <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
                           {camp.status !== "Draft" && <CopyLinkButton />}
                           {camp.linkStatus === "Working" && (
-                            <span style={{ padding: "4px 8px", borderRadius: "4px", background: C.emeraldGlow, color: C.emerald, fontSize: "10px", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.5px" }}>Working</span>
+                            <span style={{ padding: "4px 8px", borderRadius: "4px", background: C.successBg, color: C.successText, fontSize: "11px", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.5px" }}>Working</span>
                           )}
                           {camp.linkStatus === "Expired" && (
-                            <span style={{ padding: "4px 8px", borderRadius: "4px", background: "rgba(255,255,255,0.05)", color: C.muted, fontSize: "10px", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.5px" }}>Expired</span>
+                            <span style={{ padding: "4px 8px", borderRadius: "4px", background: C.alertBg, color: C.alertText, fontSize: "11px", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.5px" }}>Expired</span>
+                          )}
+                          {camp.linkStatus === "Pending" && (
+                            <span style={{ padding: "4px 8px", borderRadius: "4px", background: C.pendingBg, color: C.pendingText, fontSize: "11px", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.5px" }}>Pending</span>
                           )}
                         </div>
 
                         <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                          <motion.button whileHover={{ scale: 1.1, color: C.white }} whileTap={{ scale: 0.9 }} style={{ background: "transparent", border: "none", color: C.mutedLight, cursor: "pointer", padding: "6px" }}>
-                            <Edit2 size={16} />
+                          <motion.button whileHover={{ scale: 1.1, color: C.red }} whileTap={{ scale: 0.9 }} style={{ background: "transparent", border: "none", color: C.textHint, cursor: "pointer", padding: "6px", transition: "color 0.2s" }}>
+                            <Edit2 size={18} />
                           </motion.button>
-                          <motion.button whileHover={{ scale: 1.1, color: C.redBright }} whileTap={{ scale: 0.9 }} style={{ background: "transparent", border: "none", color: C.mutedLight, cursor: "pointer", padding: "6px" }}>
-                            <EyeOff size={16} />
+                          <motion.button whileHover={{ scale: 1.1, color: C.redBright }} whileTap={{ scale: 0.9 }} style={{ background: "transparent", border: "none", color: C.textHint, cursor: "pointer", padding: "6px", transition: "color 0.2s" }}>
+                            <EyeOff size={18} />
                           </motion.button>
                         </div>
 
@@ -313,7 +320,7 @@ export default function CampaignsPage() {
             {/* Backdrop */}
             <motion.div 
               initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.3 }}
-              style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.6)", backdropFilter: "blur(8px)", WebkitBackdropFilter: "blur(8px)" }}
+              style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.4)" }}
               onClick={() => setModalOpen(false)}
             />
 
@@ -322,24 +329,24 @@ export default function CampaignsPage() {
               initial={{ opacity: 0, scale: 0.95, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95, y: 20 }} transition={{ duration: 0.4, type: "spring", bounce: 0.3 }}
               style={{ 
                 position: "relative", width: "100%", maxWidth: "560px", margin: "24px",
-                background: "linear-gradient(145deg, rgba(22,22,22,0.95), rgba(15,15,15,0.98))",
-                border: `1px solid rgba(255,255,255,0.08)`, borderRadius: "20px",
-                boxShadow: "0 25px 50px -12px rgba(0,0,0,0.7), inset 0 1px 0 rgba(255,255,255,0.05)"
+                background: C.surface,
+                border: `1px solid ${C.border}`, borderRadius: "20px",
+                boxShadow: "0 1px 3px rgba(0,0,0,0.06), 0 4px 16px rgba(0,0,0,0.06)"
               }}
             >
               {/* Close Button */}
               <button 
                 onClick={() => setModalOpen(false)}
-                style={{ position: "absolute", right: "24px", top: "24px", background: "transparent", border: "none", color: C.muted, cursor: "pointer", transition: "color 0.2s" }}
-                onMouseEnter={(e) => e.currentTarget.style.color = C.white}
-                onMouseLeave={(e) => e.currentTarget.style.color = C.muted}
+                style={{ position: "absolute", right: "24px", top: "24px", background: "transparent", border: "none", color: C.textHint, cursor: "pointer", transition: "color 0.2s" }}
+                onMouseEnter={(e) => e.currentTarget.style.color = C.textHeading}
+                onMouseLeave={(e) => e.currentTarget.style.color = C.textHint}
               >
-                <X size={20} />
+                <X size={24} />
               </button>
 
               <div style={{ padding: "32px 32px 24px" }}>
-                <h2 style={{ fontSize: "22px", fontWeight: 600, color: C.white, marginBottom: "8px", fontFamily: "'DM Sans', sans-serif" }}>Create New Campaign</h2>
-                <p style={{ fontSize: "13px", color: C.mutedLight }}>Define the parameters for your new recruitment campaign.</p>
+                <h2 style={{ fontSize: "24px", fontWeight: 600, color: C.textHeading, marginBottom: "8px", fontFamily: "'DM Sans', sans-serif" }}>Create New Campaign</h2>
+                <p style={{ fontSize: "14px", color: C.textMuted }}>Define the parameters for your new recruitment campaign.</p>
               </div>
 
               <div style={{ padding: "0 32px 32px", display: "flex", flexDirection: "column", gap: "24px" }}>
@@ -352,17 +359,17 @@ export default function CampaignsPage() {
                 </div>
 
                 <motion.button 
-                  whileHover={{ y: -2, boxShadow: `0 10px 20px ${C.redGlowStrong}` }} whileTap={{ scale: 0.98 }}
+                  whileHover={{ y: -2, boxShadow: `0 8px 24px ${C.redGlow}` }} whileTap={{ scale: 0.98 }}
                   style={{
                     width: "100%", padding: "14px", marginTop: "8px",
                     background: `linear-gradient(135deg, ${C.redBright}, ${C.red})`,
-                    border: `1px solid rgba(255,100,100,0.3)`, borderRadius: "10px",
-                    color: C.white, fontSize: "14px", fontWeight: 600, letterSpacing: "0.5px",
-                    cursor: "pointer", position: "relative", overflow: "hidden"
+                    border: "none", borderRadius: "10px",
+                    color: C.white, fontSize: "15px", fontWeight: 600, letterSpacing: "0.5px",
+                    cursor: "pointer", position: "relative", overflow: "hidden",
+                    boxShadow: `0 4px 16px ${C.redGlow}`
                   }}
                   onClick={() => setModalOpen(false)}
                 >
-                  <div style={{ position: "absolute", inset: 0, background: "linear-gradient(105deg, transparent 20%, rgba(255,255,255,0.15) 50%, transparent 80%)", backgroundSize: "300px 100%", animation: "shimmer 2.5s infinite" }} />
                   <span style={{ position: "relative", zIndex: 1 }}>Create Campaign</span>
                 </motion.button>
               </div>

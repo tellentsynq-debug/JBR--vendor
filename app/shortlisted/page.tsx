@@ -8,33 +8,53 @@ import {
   ChevronLeft, ChevronRight, Square, CheckSquare, Calendar
 } from "lucide-react";
 
-// Reuse the Sidebar and Theme Tokens
-import Sidebar, { C } from "../components/Sidebar";
+import Sidebar from "../components/Sidebar";
+
+/* ─── DESIGN TOKENS (LIGHT GRAY PROFESSIONAL THEME) ─────────── */
+const C = {
+  bg: "#F0F2F5",
+  surface: "#FFFFFF",
+  border: "rgba(0,0,0,0.07)",
+  borderHover: "rgba(0,0,0,0.14)",
+  textHeading: "#111111",
+  textBody: "#1A1A1A",
+  textLabel: "#374151",
+  textMuted: "#6B7280",
+  textHint: "#9BA3AF",
+  red: "#C62828",
+  redBright: "#E53935",
+  redGlow: "rgba(229,57,53,0.20)",
+  redActiveBg: "rgba(198,40,40,0.08)",
+  inputBg: "#F4F6F8",
+  white: "#FFFFFF",
+  successBg: "rgba(5,150,105,0.10)",
+  successText: "#059669",
+  pendingBg: "rgba(59,130,246,0.08)",
+  pendingBorder: "rgba(59,130,246,0.2)",
+  pendingText: "#3B82F6",
+  alertBg: "rgba(198,40,40,0.08)",
+  alertText: "#C62828",
+  shadow: "rgba(0,0,0,0.06)",
+  shadowMd: "rgba(0,0,0,0.10)",
+};
 
 /* ─── GLOBAL CSS & ANIMATIONS ────────────────────────────────── */
 const GLOBAL_CSS = `
   @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;500;600;700&family=DM+Sans:wght@300;400;500;600;700&display=swap');
 
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-  body { background: ${C.bg}; color: ${C.offWhite}; font-family: 'DM Sans', sans-serif; overflow-x: hidden; }
+  body { background: ${C.bg}; color: ${C.textBody}; font-family: 'DM Sans', sans-serif; overflow-x: hidden; }
 
   ::-webkit-scrollbar { width: 8px; height: 8px; }
   ::-webkit-scrollbar-track { background: ${C.bg}; }
   ::-webkit-scrollbar-thumb { background: ${C.borderHover}; border-radius: 4px; }
-  ::-webkit-scrollbar-thumb:hover { background: ${C.muted}; }
+  ::-webkit-scrollbar-thumb:hover { background: rgba(0,0,0,0.25); }
 
-  @keyframes shimmer {
-    0%   { background-position: -400px 0; }
-    100% { background-position:  400px 0; }
-  }
-
-  .glass-card {
-    background: linear-gradient(145deg, rgba(17,17,17,0.9), rgba(12,12,12,0.95));
+  .clean-card {
+    background: ${C.surface};
     border: 1px solid ${C.border};
     border-radius: 16px;
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
-    box-shadow: 0 10px 30px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.02);
+    box-shadow: 0 1px 3px ${C.shadow}, 0 4px 16px ${C.shadow};
   }
 
   .table-container {
@@ -53,8 +73,8 @@ const GLOBAL_CSS = `
     cursor: pointer;
   }
   select option {
-    background-color: ${C.panel};
-    color: ${C.white};
+    background-color: ${C.surface};
+    color: ${C.textHeading};
   }
 `;
 
@@ -71,17 +91,6 @@ const itemVars = { hidden: { opacity: 0, y: 10 }, show: { opacity: 1, y: 0, tran
 
 /* ─── COMPONENTS ─────────────────────────────────────────────── */
 
-function AmbientBackground() {
-  return (
-    <div style={{ position: "fixed", inset: 0, zIndex: -1, pointerEvents: "none", overflow: "hidden" }}>
-      <div style={{ position: "absolute", inset: 0, background: `radial-gradient(circle at 50% 0%, ${C.surface} 0%, ${C.bg} 80%)` }} />
-      <div style={{ position: "absolute", top: "-10%", left: "-10%", width: "50vw", height: "50vw", background: `radial-gradient(circle, ${C.redGlow} 0%, transparent 60%)`, filter: "blur(100px)", opacity: 0.2 }} />
-      <div style={{ position: "absolute", bottom: "-20%", right: "-10%", width: "60vw", height: "60vw", background: `radial-gradient(circle, ${C.goldDim} 0%, transparent 60%)`, filter: "blur(120px)", opacity: 0.15 }} />
-      <div style={{ position: "absolute", inset: 0, backgroundImage: `linear-gradient(${C.border} 1px, transparent 1px), linear-gradient(90deg, ${C.border} 1px, transparent 1px)`, backgroundSize: "60px 60px", opacity: 0.3, maskImage: "linear-gradient(to bottom, black 20%, transparent 80%)", WebkitMaskImage: "linear-gradient(to bottom, black 20%, transparent 80%)" }} />
-    </div>
-  );
-}
-
 function TopNav() {
   return (
     <motion.header 
@@ -89,22 +98,22 @@ function TopNav() {
       style={{
         display: "flex", justifyContent: "space-between", alignItems: "center",
         padding: "20px 40px", borderBottom: `1px solid ${C.border}`,
-        background: "rgba(8, 8, 8, 0.4)", backdropFilter: "blur(24px)", WebkitBackdropFilter: "blur(24px)",
+        background: C.surface,
         position: "sticky", top: 0, zIndex: 10
       }}>
       <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-        <span style={{ fontSize: "12px", letterSpacing: "1px", textTransform: "uppercase", color: C.muted }}>Main</span>
-        <span style={{ color: C.mutedLight }}>/</span>
-        <span style={{ fontSize: "12px", letterSpacing: "1px", textTransform: "uppercase", color: C.white, fontWeight: 500 }}>Shortlisted</span>
+        <span style={{ fontSize: "12px", letterSpacing: "1px", textTransform: "uppercase", color: C.textHint, fontWeight: 600 }}>Main</span>
+        <span style={{ color: C.textMuted }}>/</span>
+        <span style={{ fontSize: "12px", letterSpacing: "1px", textTransform: "uppercase", color: C.textHeading, fontWeight: 600 }}>Shortlisted</span>
       </div>
       <div style={{ display: "flex", alignItems: "center", gap: "24px" }}>
-        <span style={{ fontSize: "12px", color: C.mutedLight }}>
-          Welcome, <span style={{ color: C.offWhite, fontWeight: 500 }}>support@jbrstaffingsolutions.ca</span>
+        <span style={{ fontSize: "13px", color: C.textMuted }}>
+          Welcome, <span style={{ color: C.textHeading, fontWeight: 600 }}>support@jbrstaffingsolutions.ca</span>
         </span>
         <motion.button 
-          whileHover={{ scale: 1.02, backgroundColor: "rgba(198,40,40,0.1)", borderColor: C.red, color: C.red }} whileTap={{ scale: 0.98 }}
-          style={{ display: "flex", alignItems: "center", gap: "8px", padding: "8px 16px", background: "transparent", border: `1px solid ${C.border}`, borderRadius: "6px", color: C.offWhite, fontSize: "12px", fontWeight: 500, cursor: "pointer", transition: "all 0.2s ease" }}>
-          Sign Out <LogOut size={14} />
+          whileHover={{ backgroundColor: C.redActiveBg, borderColor: C.red, color: C.red }} whileTap={{ scale: 0.98 }}
+          style={{ display: "flex", alignItems: "center", gap: "8px", padding: "8px 16px", background: "transparent", border: `1px solid ${C.border}`, borderRadius: "6px", color: C.textLabel, fontSize: "13px", fontWeight: 600, cursor: "pointer", transition: "all 0.2s ease" }}>
+          Sign Out <LogOut size={16} />
         </motion.button>
       </div>
     </motion.header>
@@ -117,7 +126,6 @@ export default function ShortlistedPage() {
   const [activeTab, setActiveTab] = useState("shortlisted");
   const [selectedRows, setSelectedRows] = useState<number[]>([]);
 
-  // Matching the 11-column grid layout
   const tableGridTemplate = "40px 1.2fr 1.8fr 1.2fr 0.8fr 1.2fr 1.5fr 0.8fr 1fr 1.5fr 100px"; 
   const dataCount = SHORTLISTED_DATA.length;
 
@@ -133,17 +141,14 @@ export default function ShortlistedPage() {
   return (
     <>
       <style>{GLOBAL_CSS}</style>
-      <AmbientBackground />
       
       <div style={{ display: "flex", height: "100vh", overflow: "hidden" }}>
         
-        {/* Extracted Reusable Sidebar */}
         <Sidebar 
           isCollapsed={isSidebarCollapsed} setCollapsed={setSidebarCollapsed} 
           activeTab={activeTab} setActiveTab={setActiveTab} 
         />
 
-        {/* Right Scrollable Content */}
         <div style={{ flex: 1, display: "flex", flexDirection: "column", overflowY: "auto", position: "relative" }}>
           <TopNav />
 
@@ -151,34 +156,34 @@ export default function ShortlistedPage() {
             
             {/* Header Section */}
             <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }}>
-              <h1 style={{ display: "flex", alignItems: "center", gap: "12px", fontFamily: "'Cormorant Garamond', serif", fontSize: "42px", fontWeight: 600, color: C.white, marginBottom: "8px", letterSpacing: "-0.5px" }}>
-                <UserCheck size={32} color={C.red} strokeWidth={1.5} /> Shortlisted Candidates
+              <h1 style={{ display: "flex", alignItems: "center", gap: "12px", fontFamily: "'Cormorant Garamond', serif", fontSize: "42px", fontWeight: 600, color: C.textHeading, marginBottom: "8px", letterSpacing: "-0.5px" }}>
+                <UserCheck size={32} color={C.red} strokeWidth={2} /> Shortlisted Candidates
               </h1>
-              <p style={{ fontSize: "14px", color: C.mutedLight }}>
+              <p style={{ fontSize: "15px", color: C.textMuted }}>
                 Select a group to view shortlisted candidates.
               </p>
             </motion.div>
 
             {/* Filters Section */}
-            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, delay: 0.1 }} className="glass-card" style={{ padding: "24px 32px" }}>
-              <h3 style={{ fontSize: "18px", fontWeight: 600, color: C.white, marginBottom: "4px" }}>Filters</h3>
-              <p style={{ fontSize: "12px", color: C.mutedLight, marginBottom: "24px" }}>Filter candidates by various criteria</p>
+            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, delay: 0.1 }} className="clean-card" style={{ padding: "24px 32px" }}>
+              <h3 style={{ fontSize: "18px", fontWeight: 600, color: C.textHeading, marginBottom: "4px" }}>Filters</h3>
+              <p style={{ fontSize: "13px", color: C.textMuted, marginBottom: "24px" }}>Filter candidates by various criteria</p>
               
               {/* Top Full-Width Group Dropdown */}
               <div style={{ marginBottom: "20px" }}>
-                <label style={{ display: "block", fontSize: "11px", color: C.mutedLight, marginBottom: "8px" }}>Group</label>
+                <label style={{ display: "block", fontSize: "12px", fontWeight: 600, color: C.textLabel, marginBottom: "8px" }}>Group</label>
                 <div style={{ position: "relative" }}>
                   <select 
                     style={{
-                      width: "100%", background: "rgba(255,255,255,0.02)", border: `1px solid ${C.border}`, borderRadius: "8px",
-                      padding: "10px 36px 10px 16px", color: C.offWhite, fontSize: "13px", outline: "none", transition: "border-color 0.2s"
+                      width: "100%", background: C.inputBg, border: `1px solid ${C.border}`, borderRadius: "8px",
+                      padding: "10px 36px 10px 16px", color: C.textBody, fontSize: "14px", outline: "none", transition: "border-color 0.2s"
                     }}
                   >
                     <option>Select a group</option>
                     <option>Summer 2026 Intake</option>
                     <option>Tech Leads Batch A</option>
                   </select>
-                  <ChevronDown size={14} color={C.muted} style={{ position: "absolute", right: "12px", top: "50%", transform: "translateY(-50%)", pointerEvents: "none" }} />
+                  <ChevronDown size={16} color={C.textHint} style={{ position: "absolute", right: "12px", top: "50%", transform: "translateY(-50%)", pointerEvents: "none" }} />
                 </div>
               </div>
 
@@ -187,14 +192,14 @@ export default function ShortlistedPage() {
                 
                 {/* Search */}
                 <div>
-                  <label style={{ display: "block", fontSize: "11px", color: C.mutedLight, marginBottom: "8px" }}>Search</label>
+                  <label style={{ display: "block", fontSize: "12px", fontWeight: 600, color: C.textLabel, marginBottom: "8px" }}>Search</label>
                   <div style={{ position: "relative" }}>
-                    <Search size={16} color={C.muted} style={{ position: "absolute", left: "12px", top: "50%", transform: "translateY(-50%)" }} />
+                    <Search size={16} color={C.textHint} style={{ position: "absolute", left: "12px", top: "50%", transform: "translateY(-50%)" }} />
                     <input 
                       type="text" placeholder="Search by name, email, or phone" 
                       style={{
-                        width: "100%", background: "rgba(255,255,255,0.02)", border: `1px solid ${C.border}`, borderRadius: "8px",
-                        padding: "10px 16px 10px 36px", color: C.white, fontSize: "13px", outline: "none", transition: "border-color 0.2s",
+                        width: "100%", background: C.inputBg, border: `1px solid ${C.border}`, borderRadius: "8px",
+                        padding: "10px 16px 10px 36px", color: C.textBody, fontSize: "14px", outline: "none", transition: "border-color 0.2s",
                         textOverflow: "ellipsis"
                       }}
                       onFocus={(e) => e.target.style.borderColor = C.red}
@@ -211,17 +216,17 @@ export default function ShortlistedPage() {
                   { label: "City", options: ["All Cities", "Surrey", "Vancouver", "Toronto"] },
                 ].map((filter, idx) => (
                   <div key={idx}>
-                    <label style={{ display: "block", fontSize: "11px", color: C.mutedLight, marginBottom: "8px" }}>{filter.label}</label>
+                    <label style={{ display: "block", fontSize: "12px", fontWeight: 600, color: C.textLabel, marginBottom: "8px" }}>{filter.label}</label>
                     <div style={{ position: "relative" }}>
                       <select 
                         style={{
-                          width: "100%", background: "rgba(255,255,255,0.02)", border: `1px solid ${C.border}`, borderRadius: "8px",
-                          padding: "10px 36px 10px 16px", color: C.offWhite, fontSize: "13px", outline: "none", transition: "border-color 0.2s"
+                          width: "100%", background: C.inputBg, border: `1px solid ${C.border}`, borderRadius: "8px",
+                          padding: "10px 36px 10px 16px", color: C.textBody, fontSize: "14px", outline: "none", transition: "border-color 0.2s"
                         }}
                       >
                         {filter.options.map(opt => <option key={opt}>{opt}</option>)}
                       </select>
-                      <ChevronDown size={14} color={C.muted} style={{ position: "absolute", right: "12px", top: "50%", transform: "translateY(-50%)", pointerEvents: "none" }} />
+                      <ChevronDown size={16} color={C.textHint} style={{ position: "absolute", right: "12px", top: "50%", transform: "translateY(-50%)", pointerEvents: "none" }} />
                     </div>
                   </div>
                 ))}
@@ -229,36 +234,39 @@ export default function ShortlistedPage() {
             </motion.div>
 
             {/* Data Table Section */}
-            <motion.div variants={containerVars} initial="hidden" animate="show" className="glass-card" style={{ display: "flex", flexDirection: "column", overflow: "hidden" }}>
+            <motion.div variants={containerVars} initial="hidden" animate="show" className="clean-card" style={{ display: "flex", flexDirection: "column", overflow: "hidden" }}>
               
               {/* Table Header Controls */}
               <div style={{ padding: "24px 32px", borderBottom: `1px solid ${C.border}` }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", flexWrap: "wrap", gap: "16px", marginBottom: "20px" }}>
                   <div>
-                    <h3 style={{ fontSize: "20px", fontWeight: 600, color: C.white, display: "flex", alignItems: "center", gap: "8px" }}>
+                    <h3 style={{ fontSize: "20px", fontWeight: 600, color: C.textHeading, display: "flex", alignItems: "center", gap: "8px" }}>
                       Employees <span style={{ color: C.redBright }}>({dataCount})</span>
                     </h3>
-                    <p style={{ fontSize: "12px", color: C.mutedLight, marginTop: "4px" }}>
+                    <p style={{ fontSize: "13px", color: C.textMuted, marginTop: "4px" }}>
                       Registered candidates and their information (Showing {dataCount > 0 ? `1-${dataCount}` : '0'} of {dataCount})
                     </p>
                   </div>
                   <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                    <span style={{ fontSize: "12px", color: C.muted }}>Rows per page:</span>
+                    <span style={{ fontSize: "13px", color: C.textLabel, fontWeight: 500 }}>Rows per page:</span>
                     <div style={{ position: "relative" }}>
-                      <select style={{ background: "rgba(255,255,255,0.03)", border: `1px solid ${C.border}`, borderRadius: "6px", padding: "6px 28px 6px 12px", color: C.white, fontSize: "12px", outline: "none" }}>
+                      <select style={{ background: C.inputBg, border: `1px solid ${C.border}`, borderRadius: "6px", padding: "8px 28px 8px 12px", color: C.textBody, fontSize: "13px", outline: "none" }}>
                         <option>25</option>
                         <option>50</option>
                         <option>100</option>
                       </select>
-                      <ChevronDown size={12} color={C.muted} style={{ position: "absolute", right: "10px", top: "50%", transform: "translateY(-50%)", pointerEvents: "none" }} />
+                      <ChevronDown size={14} color={C.textHint} style={{ position: "absolute", right: "10px", top: "50%", transform: "translateY(-50%)", pointerEvents: "none" }} />
                     </div>
                   </div>
                 </div>
 
                 {/* Bulk Actions Row */}
                 <div style={{ display: "flex", flexWrap: "wrap", gap: "12px" }}>
-                  <motion.button whileHover={{ y: -1 }} whileTap={{ scale: 0.98 }} style={{ display: "flex", alignItems: "center", gap: "8px", padding: "8px 16px", background: "rgba(5,150,105,0.1)", border: `1px solid rgba(5,150,105,0.3)`, borderRadius: "6px", color: C.emerald, fontSize: "12px", fontWeight: 600, cursor: "pointer" }}>
-                    <Download size={14} /> Download Excel ({dataCount})
+                  <motion.button 
+                    whileHover={{ backgroundColor: C.redActiveBg, borderColor: C.red, color: C.red }} whileTap={{ scale: 0.98 }}
+                    style={{ display: "flex", alignItems: "center", gap: "8px", padding: "8px 16px", background: "transparent", border: `1px solid ${C.border}`, borderRadius: "6px", color: C.textLabel, fontSize: "13px", fontWeight: 600, cursor: "pointer", transition: "all 0.2s" }}
+                  >
+                    <Download size={16} /> Download Excel ({dataCount})
                   </motion.button>
 
                   {[
@@ -267,9 +275,22 @@ export default function ShortlistedPage() {
                     { label: "Assign to Group(s)", icon: Users },
                     { label: "Bulk Delete", icon: Trash2 },
                   ].map((action, idx) => (
-                    <button key={idx} style={{ display: "flex", alignItems: "center", gap: "8px", padding: "8px 16px", background: "rgba(255,255,255,0.02)", border: `1px solid ${C.border}`, borderRadius: "6px", color: C.muted, fontSize: "12px", fontWeight: 500, cursor: "not-allowed" }}>
-                      <action.icon size={14} /> {action.label} (0)
-                    </button>
+                    <motion.button 
+                      key={idx}
+                      disabled={selectedRows.length === 0}
+                      whileHover={selectedRows.length > 0 ? { backgroundColor: C.redActiveBg, borderColor: C.red, color: C.red } : {}}
+                      style={{ 
+                        display: "flex", alignItems: "center", gap: "8px", padding: "8px 16px", 
+                        background: "transparent", 
+                        border: `1px solid ${C.border}`, 
+                        borderRadius: "6px", 
+                        color: selectedRows.length > 0 ? C.textHeading : C.textHint, 
+                        fontSize: "13px", fontWeight: 600, 
+                        cursor: selectedRows.length > 0 ? "pointer" : "not-allowed", transition: "all 0.2s" 
+                      }}
+                    >
+                      <action.icon size={16} /> {action.label} ({selectedRows.length})
+                    </motion.button>
                   ))}
                 </div>
               </div>
@@ -279,20 +300,20 @@ export default function ShortlistedPage() {
                 <div className="table-min-width">
                   
                   {/* Table Column Headers */}
-                  <div style={{ display: "grid", gridTemplateColumns: tableGridTemplate, padding: "16px 32px", borderBottom: `1px solid ${C.border}`, background: "rgba(0,0,0,0.2)", alignItems: "center" }}>
-                    <button onClick={toggleAll} style={{ background: "none", border: "none", color: C.muted, cursor: "pointer", padding: 0, display: "flex" }}>
+                  <div style={{ display: "grid", gridTemplateColumns: tableGridTemplate, padding: "16px 32px", borderBottom: `1px solid ${C.border}`, background: C.inputBg, alignItems: "center" }}>
+                    <button onClick={toggleAll} style={{ background: "none", border: "none", color: C.textHint, cursor: "pointer", padding: 0, display: "flex" }}>
                       {selectedRows.length === dataCount && dataCount > 0 ? <CheckSquare size={16} color={C.red} /> : <Square size={16} />}
                     </button>
                     {["Name", "Email", "Phone", "Gender", "Job Category", "Location", "Status", "Registration Date", "Documents", "Actions"].map((head, i) => (
-                      <span key={i} style={{ fontSize: "11px", textTransform: "uppercase", letterSpacing: "1px", color: C.mutedLight, fontWeight: 500 }}>{head}</span>
+                      <span key={i} style={{ fontSize: "11px", textTransform: "uppercase", letterSpacing: "1px", color: C.textHint, fontWeight: 600 }}>{head}</span>
                     ))}
                   </div>
 
                   {/* Table Rows or Empty State */}
                   {dataCount === 0 ? (
-                    <div style={{ padding: "60px", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "12px", opacity: 0.5 }}>
-                      <Users size={48} color={C.muted} />
-                      <p style={{ color: C.mutedLight, fontSize: "14px" }}>No candidates found in this group.</p>
+                    <div style={{ padding: "60px", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "12px", opacity: 0.7 }}>
+                      <Users size={48} color={C.textHint} />
+                      <p style={{ color: C.textMuted, fontSize: "15px", fontWeight: 500 }}>No candidates found in this group.</p>
                     </div>
                   ) : (
                     <div style={{ display: "flex", flexDirection: "column" }}>
@@ -301,64 +322,64 @@ export default function ShortlistedPage() {
                         return (
                           <motion.div 
                             key={emp.id} variants={itemVars}
-                            whileHover={{ backgroundColor: "rgba(255,255,255,0.02)" }}
+                            whileHover={{ backgroundColor: C.inputBg }}
                             style={{ 
                               display: "grid", gridTemplateColumns: tableGridTemplate, alignItems: "center",
                               padding: "16px 32px", borderBottom: idx !== dataCount - 1 ? `1px solid ${C.border}` : "none",
-                              background: isSelected ? "rgba(198,40,40,0.03)" : "transparent",
+                              background: isSelected ? C.redActiveBg : "transparent",
                               transition: "background-color 0.2s ease"
                             }}
                           >
                             {/* Checkbox */}
-                            <button onClick={() => toggleRow(emp.id)} style={{ background: "none", border: "none", color: isSelected ? C.red : C.muted, cursor: "pointer", padding: 0, display: "flex" }}>
+                            <button onClick={() => toggleRow(emp.id)} style={{ background: "none", border: "none", color: isSelected ? C.red : C.textHint, cursor: "pointer", padding: 0, display: "flex" }}>
                               {isSelected ? <CheckSquare size={16} /> : <Square size={16} />}
                             </button>
 
                             {/* Name */}
-                            <div style={{ fontSize: "13px", fontWeight: 600, color: C.white, lineHeight: 1.4 }}>
+                            <div style={{ fontSize: "14px", fontWeight: 600, color: C.textHeading, lineHeight: 1.4 }}>
                               {emp.name.split(" ").map((n, i) => <div key={i}>{n}</div>)}
                             </div>
                             
                             {/* Email */}
-                            <div style={{ fontSize: "13px", color: C.mutedLight, wordBreak: "break-all", paddingRight: "16px" }}>{emp.email}</div>
+                            <div style={{ fontSize: "13px", color: C.textMuted, wordBreak: "break-all", paddingRight: "16px" }}>{emp.email}</div>
                             
                             {/* Phone */}
-                            <div style={{ fontSize: "13px", color: C.mutedLight }}>{emp.phone}</div>
+                            <div style={{ fontSize: "13px", color: C.textMuted }}>{emp.phone}</div>
 
                             {/* Gender */}
-                            <div style={{ fontSize: "13px", color: C.mutedLight }}>{emp.gender}</div>
+                            <div style={{ fontSize: "13px", color: C.textMuted }}>{emp.gender}</div>
                             
                             {/* Job */}
-                            <div style={{ fontSize: "13px", color: C.white, fontWeight: 500 }}>{emp.role}</div>
+                            <div style={{ fontSize: "14px", color: C.textBody, fontWeight: 500 }}>{emp.role}</div>
 
                             {/* Location */}
-                            <div style={{ fontSize: "12px", color: C.mutedLight, lineHeight: 1.4 }}>
+                            <div style={{ fontSize: "13px", color: C.textMuted, lineHeight: 1.4 }}>
                               {emp.location.split(", ").map((l, i) => <div key={i}>{l}</div>)}
                             </div>
                             
                             {/* Status Badge */}
                             <div>
-                              <div style={{ display: "inline-flex", alignItems: "center", padding: "4px 12px", borderRadius: "20px", background: "rgba(5, 150, 105, 0.1)", border: `1px solid rgba(5, 150, 105, 0.3)`, color: C.emerald, fontSize: "10px", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.5px" }}>
+                              <div style={{ display: "inline-flex", alignItems: "center", padding: "6px 12px", borderRadius: "20px", background: C.successBg, color: C.successText, fontSize: "11px", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.5px" }}>
                                 {emp.status}
                               </div>
                             </div>
 
                             {/* Date */}
-                            <div style={{ fontSize: "12px", color: C.mutedLight, display: "flex", alignItems: "center", gap: "6px" }}>
-                              <Calendar size={12} /> {emp.date}
+                            <div style={{ fontSize: "13px", color: C.textMuted, display: "flex", alignItems: "center", gap: "6px" }}>
+                              <Calendar size={14} /> {emp.date}
                             </div>
 
                             {/* Documents */}
                             <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-                              <motion.button whileHover={{ backgroundColor: "rgba(255,255,255,0.08)" }} style={{ display: "flex", alignItems: "center", gap: "6px", padding: "4px 8px", background: "rgba(255,255,255,0.03)", border: `1px solid ${C.border}`, borderRadius: "4px", color: C.white, fontSize: "11px", fontWeight: 500, cursor: "pointer", width: "fit-content" }}>
-                                <Eye size={12} /> View Resume
+                              <motion.button whileHover={{ backgroundColor: C.redActiveBg, borderColor: C.red, color: C.red }} style={{ display: "flex", alignItems: "center", gap: "6px", padding: "6px 10px", background: "transparent", border: `1px solid ${C.border}`, borderRadius: "6px", color: C.textLabel, fontSize: "12px", fontWeight: 500, cursor: "pointer", width: "fit-content", transition: "all 0.2s" }}>
+                                <Eye size={14} /> View Resume
                               </motion.button>
                             </div>
 
                             {/* Actions */}
                             <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                              <motion.button whileHover={{ scale: 1.1, color: C.redBright, borderColor: C.borderHover }} whileTap={{ scale: 0.9 }} style={{ background: "rgba(255,255,255,0.02)", border: `1px solid ${C.border}`, borderRadius: "6px", color: C.mutedLight, cursor: "pointer", padding: "6px", display: "flex" }}>
-                                <Trash2 size={14} />
+                              <motion.button whileHover={{ scale: 1.1, backgroundColor: C.redActiveBg, color: C.redBright, borderColor: C.redBright }} whileTap={{ scale: 0.9 }} style={{ background: "transparent", border: `1px solid ${C.border}`, borderRadius: "6px", color: C.textHint, cursor: "pointer", padding: "8px", display: "flex", transition: "all 0.2s" }}>
+                                <Trash2 size={16} />
                               </motion.button>
                             </div>
 

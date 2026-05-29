@@ -8,13 +8,30 @@ import {
 } from "lucide-react";
 import { useRouter, usePathname } from "next/navigation";
 
-/* ─── SHARED TOKENS (You can move this to a theme.ts file) ─── */
+/* ─── DESIGN TOKENS ─────────────────────────────────────────── */
 export const C = {
-  bg: "#080808", surface: "#0f0f0f", card: "#111111", panel: "#0c0c0c",
-  red: "#C62828", redBright: "#E53935", redGlow: "rgba(198,40,40,0.18)", redGlowStrong: "rgba(229,57,53,0.35)",
-  gold: "#BFA46A", goldDim: "rgba(191,164,106,0.15)", emerald: "#059669", emeraldGlow: "rgba(5,150,105,0.2)",
-  white: "#FFFFFF", offWhite: "#E8E6E0", muted: "#6B6B68", mutedLight: "#9A9896",
-  border: "rgba(255,255,255,0.055)", borderHover: "rgba(255,255,255,0.12)",
+  bg: "#F0F2F5",
+  surface: "#FFFFFF",
+  border: "rgba(0,0,0,0.07)",
+  borderHover: "rgba(0,0,0,0.14)",
+  textHeading: "#111111",
+  textBody: "#1A1A1A",
+  textLabel: "#374151",
+  textMuted: "#6B7280",
+  textHint: "#9BA3AF",
+  red: "#C62828",
+  redBright: "#E53935",
+  redGlow: "rgba(229,57,53,0.20)",
+  redActiveBg: "rgba(198,40,40,0.08)",
+  inputBg: "#F4F6F8",
+  white: "#FFFFFF",
+  successBg: "rgba(5,150,105,0.10)",
+  successText: "#059669",
+  pendingBg: "rgba(59,130,246,0.08)",
+  pendingBorder: "rgba(59,130,246,0.2)",
+  pendingText: "#3B82F6",
+  alertBg: "rgba(198,40,40,0.08)",
+  alertText: "#C62828",
 };
 
 const SIDEBAR_MENU = [
@@ -47,7 +64,6 @@ const easeOutCirc = [0.0, 0.55, 0.45, 1];
 interface SidebarProps {
   isCollapsed: boolean;
   setCollapsed: (val: boolean) => void;
-  // Made optional so it falls back to URL routing automatically
   activeTab?: string;
   setActiveTab?: (val: string) => void;
 }
@@ -62,8 +78,9 @@ export default function Sidebar({ isCollapsed, setCollapsed, activeTab, setActiv
       animate={{ width: isCollapsed ? 80 : 280 }}
       transition={{ duration: 0.4, ease: easeOutCirc }}
       style={{
-        background: "rgba(11, 11, 11, 0.6)", backdropFilter: "blur(40px)", WebkitBackdropFilter: "blur(40px)",
-        borderRight: `1px solid ${C.border}`, height: "100vh", position: "sticky", top: 0,
+        background: C.surface,
+        borderRight: `1px solid ${C.border}`, 
+        height: "100vh", position: "sticky", top: 0,
         display: "flex", flexDirection: "column", zIndex: 50, overflow: "hidden", flexShrink: 0
       }}
     >
@@ -72,21 +89,20 @@ export default function Sidebar({ isCollapsed, setCollapsed, activeTab, setActiv
           {!isCollapsed && (
             <motion.div initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -10 }} style={{ display: "flex", flexDirection: "column", gap: "4px", overflow: "hidden" }}>
               <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                <div style={{ width: "24px", height: "24px", border: `1px solid ${C.red}`, display: "flex", alignItems: "center", justifyContent: "center", position: "relative" }}>
-                  <div style={{ position: "absolute", inset: 0, background: "linear-gradient(105deg, transparent 30%, rgba(255,255,255,0.2) 50%, transparent 70%)", backgroundSize: "200px 100%", animation: "shimmer 3s infinite" }} />
+                <div style={{ width: "24px", height: "24px", border: `1px solid ${C.border}`, borderRadius: "4px", display: "flex", alignItems: "center", justifyContent: "center", position: "relative", background: C.inputBg }}>
                   <span style={{ fontFamily: "'Cormorant Garamond', serif", color: C.red, fontWeight: 700, fontSize: "14px", zIndex: 1 }}>JBR</span>
                 </div>
-                <span style={{ fontFamily: "'DM Sans', sans-serif", fontSize: "14px", fontWeight: 600, letterSpacing: "2px", color: C.white, whiteSpace: "nowrap" }}>STAFFING</span>
+                <span style={{ fontFamily: "'DM Sans', sans-serif", fontSize: "14px", fontWeight: 700, letterSpacing: "1.5px", color: C.textHeading, whiteSpace: "nowrap" }}>STAFFING</span>
               </div>
-              <span style={{ fontSize: "9px", letterSpacing: "1px", color: C.muted, textTransform: "uppercase", whiteSpace: "nowrap" }}>Redefining Culture</span>
+              <span style={{ fontSize: "9px", letterSpacing: "1px", color: C.textMuted, textTransform: "uppercase", whiteSpace: "nowrap", paddingLeft: "32px" }}>Redefining Culture</span>
             </motion.div>
           )}
         </AnimatePresence>
 
         <motion.button
           onClick={() => setCollapsed(!isCollapsed)}
-          whileHover={{ scale: 1.1, backgroundColor: "rgba(255,255,255,0.05)" }} whileTap={{ scale: 0.9 }}
-          style={{ background: "transparent", border: "none", color: C.mutedLight, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", padding: "6px", borderRadius: "8px" }}
+          whileHover={{ scale: 1.05, backgroundColor: C.inputBg }} whileTap={{ scale: 0.95 }}
+          style={{ background: "transparent", border: "none", color: C.textMuted, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", padding: "6px", borderRadius: "8px", transition: "color 0.2s" }}
         >
           {isCollapsed ? <Menu size={20} /> : <ChevronLeft size={20} />}
         </motion.button>
@@ -96,7 +112,7 @@ export default function Sidebar({ isCollapsed, setCollapsed, activeTab, setActiv
         {SIDEBAR_MENU.map((group, gIdx) => (
           <div key={gIdx} style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
             {!isCollapsed ? (
-              <motion.span initial={{ opacity: 0 }} animate={{ opacity: 1 }} style={{ fontSize: "10px", letterSpacing: "1.5px", textTransform: "uppercase", color: C.muted, paddingLeft: "12px", marginBottom: "4px" }}>{group.group}</motion.span>
+              <motion.span initial={{ opacity: 0 }} animate={{ opacity: 1 }} style={{ fontSize: "10px", fontWeight: 600, letterSpacing: "1px", textTransform: "uppercase", color: C.textHint, paddingLeft: "12px", marginBottom: "4px" }}>{group.group}</motion.span>
             ) : <div style={{ height: "1px", background: C.border, margin: "8px 0" }} />}
 
             {group.items.map((item) => {
@@ -109,20 +125,20 @@ export default function Sidebar({ isCollapsed, setCollapsed, activeTab, setActiv
                   key={item.id} 
                   onClick={() => {
                     if (setActiveTab) setActiveTab(item.id);
-                    router.push(item.path); // <--- Triggers actual navigation
+                    router.push(item.path);
                   }}
-                  whileHover={!isActive ? { backgroundColor: "rgba(255,255,255,0.03)", x: 4 } : {}} whileTap={{ scale: 0.98 }}
+                  whileHover={!isActive ? { backgroundColor: C.inputBg, x: 4 } : {}} whileTap={{ scale: 0.98 }}
                   style={{
                     display: "flex", alignItems: "center", gap: "16px", width: "100%", padding: "12px",
-                    background: isActive ? "linear-gradient(90deg, rgba(198,40,40,0.15) 0%, transparent 100%)" : "transparent",
-                    border: "none", borderRadius: "8px", cursor: "pointer", position: "relative", transition: "color 0.2s ease"
+                    background: isActive ? C.redActiveBg : "transparent",
+                    border: "none", borderRadius: "8px", cursor: "pointer", position: "relative", transition: "all 0.2s ease"
                   }}
                 >
-                  {isActive && <motion.div layoutId="activeTabIndicator" style={{ position: "absolute", left: 0, top: "10%", bottom: "10%", width: "3px", borderRadius: "0 4px 4px 0", background: C.red, boxShadow: `0 0 10px ${C.red}` }} />}
-                  <div style={{ display: "flex", justifyContent: "center", width: isCollapsed ? "100%" : "auto", color: isActive ? C.redBright : C.mutedLight }}><Icon size={20} strokeWidth={isActive ? 2.5 : 2} /></div>
+                  {isActive && <motion.div layoutId="activeTabIndicator" style={{ position: "absolute", left: 0, top: "10%", bottom: "10%", width: "3px", borderRadius: "0 4px 4px 0", background: C.red }} />}
+                  <div style={{ display: "flex", justifyContent: "center", width: isCollapsed ? "100%" : "auto", color: isActive ? C.red : C.textMuted }}><Icon size={20} strokeWidth={isActive ? 2.5 : 2} /></div>
                   <AnimatePresence>
                     {!isCollapsed && (
-                      <motion.span initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -10 }} style={{ fontSize: "13px", fontWeight: isActive ? 600 : 400, color: isActive ? C.white : C.offWhite, whiteSpace: "nowrap" }}>
+                      <motion.span initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -10 }} style={{ fontSize: "13px", fontWeight: isActive ? 600 : 500, color: isActive ? C.red : C.textLabel, whiteSpace: "nowrap" }}>
                         {item.label}
                       </motion.span>
                     )}

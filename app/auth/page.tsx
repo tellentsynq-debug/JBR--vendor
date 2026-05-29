@@ -1,38 +1,36 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useCallback } from "react";
 
 type Mode = "signin" | "signup";
 
 /* ─── DESIGN TOKENS ─────────────────────────────────────────── */
 const C = {
-  bg: "#080808",
-  surface: "#0f0f0f",
-  card: "#111111",
-  panel: "#0c0c0c",
+  bg: "#F0F2F5",
+  surface: "#FFFFFF",
+  card: "#FFFFFF",
+  panel: "#FFFFFF",
   red: "#C62828",
   redBright: "#E53935",
-  redGlow: "rgba(198,40,40,0.18)",
-  redGlowStrong: "rgba(229,57,53,0.35)",
-  gold: "#BFA46A",
-  goldDim: "rgba(191,164,106,0.15)",
+  redGlow: "rgba(229,57,53,0.20)",
+  redActiveBg: "rgba(198,40,40,0.08)",
   white: "#FFFFFF",
-  offWhite: "#E8E6E0",
-  muted: "#6B6B68",
-  mutedLight: "#9A9896",
-  border: "rgba(255,255,255,0.055)",
-  borderHover: "rgba(255,255,255,0.12)",
-  borderFocus: "rgba(198,40,40,0.6)",
-  inputBg: "rgba(255,255,255,0.028)",
-  inputBgFocus: "rgba(255,255,255,0.05)",
+  textHeading: "#111111",
+  textBody: "#1A1A1A",
+  textLabel: "#374151",
+  textMuted: "#6B7280",
+  textHint: "#9BA3AF",
+  border: "rgba(0,0,0,0.07)",
+  borderHover: "rgba(0,0,0,0.14)",
+  inputBg: "#F4F6F8",
 };
 
-/* ─── KEYFRAMES STRING ───────────────────────────────────────── */
+/* ─── KEYFRAMES & GLOBAL STYLES ──────────────────────────────── */
 const GLOBAL_CSS = `
-  @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;500;600&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300&display=swap');
+  @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;500;600&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600&display=swap');
 
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-  html, body { height: 100%; background: ${C.bg}; overflow-x: hidden; }
+  html, body { height: 100%; background: ${C.bg}; overflow-x: hidden; color: ${C.textBody}; }
 
   @keyframes fadeUp {
     from { opacity: 0; transform: translateY(32px); }
@@ -49,38 +47,8 @@ const GLOBAL_CSS = `
     from { opacity: 0; transform: scale(0.93); }
     to   { opacity: 1; transform: scale(1); }
   }
-  @keyframes shimmer {
-    0%   { background-position: -400px 0; }
-    100% { background-position:  400px 0; }
-  }
-  @keyframes borderPulse {
-    0%,100% { box-shadow: 0 0 0 0 rgba(198,40,40,0); }
-    50%      { box-shadow: 0 0 0 4px rgba(198,40,40,0.12); }
-  }
   @keyframes spin {
     to { transform: rotate(360deg); }
-  }
-  @keyframes floatA {
-    0%,100% { transform: translate(0,0) scale(1); }
-    33%     { transform: translate(30px,-20px) scale(1.05); }
-    66%     { transform: translate(-20px,15px) scale(0.97); }
-  }
-  @keyframes floatB {
-    0%,100% { transform: translate(0,0) scale(1); }
-    40%     { transform: translate(-25px,20px) scale(1.03); }
-    70%     { transform: translate(20px,-15px) scale(0.98); }
-  }
-  @keyframes floatC {
-    0%,100% { transform: translate(0,0); }
-    50%     { transform: translate(15px,25px); }
-  }
-  @keyframes scanline {
-    from { transform: translateY(-100%); }
-    to   { transform: translateY(100vh); }
-  }
-  @keyframes orbPulse {
-    0%,100% { opacity: 0.06; transform: scale(1); }
-    50%      { opacity: 0.12; transform: scale(1.08); }
   }
   @keyframes inputReveal {
     from { opacity: 0; transform: translateX(-8px); }
@@ -103,11 +71,11 @@ const GLOBAL_CSS = `
   input:-webkit-autofill,
   input:-webkit-autofill:hover,
   input:-webkit-autofill:focus {
-    -webkit-box-shadow: 0 0 0 1000px #111 inset !important;
-    -webkit-text-fill-color: #E8E6E0 !important;
+    -webkit-box-shadow: 0 0 0 1000px ${C.surface} inset !important;
+    -webkit-text-fill-color: ${C.textBody} !important;
     transition: background-color 5000s;
   }
-  input::placeholder { color: rgba(107,107,104,0.5); }
+  input::placeholder { color: ${C.textHint}; }
   input:focus        { outline: none; }
   button:focus-visible { outline: 2px solid ${C.redBright}; outline-offset: 3px; }
 
@@ -124,131 +92,6 @@ const GLOBAL_CSS = `
   .stat-item:nth-child(3) { animation-delay: 1.0s; }
 `;
 
-/* ─── CANVAS BACKGROUND ─────────────────────────────────────── */
-function CinematicBackground() {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const rafRef    = useRef<number>(0);
-  const t         = useRef(0);
-
-  useEffect(() => {
-    const cvs = canvasRef.current;
-    if (!cvs) return;
-    const ctx = cvs.getContext("2d")!;
-
-    const resize = () => {
-      cvs.width  = window.innerWidth;
-      cvs.height = window.innerHeight;
-    };
-    resize();
-    window.addEventListener("resize", resize);
-
-    type P = { x: number; y: number; vx: number; vy: number; r: number; a: number; };
-    const pts: P[] = Array.from({ length: 80 }, () => ({
-      x: Math.random() * window.innerWidth,
-      y: Math.random() * window.innerHeight,
-      vx: (Math.random() - 0.5) * 0.25,
-      vy: (Math.random() - 0.5) * 0.25,
-      r: Math.random() * 1.2 + 0.2,
-      a: Math.random() * 0.35 + 0.05,
-    }));
-
-    const draw = () => {
-      t.current += 0.005;
-      ctx.clearRect(0, 0, cvs.width, cvs.height);
-
-      /* deep vignette */
-      const vig = ctx.createRadialGradient(
-        cvs.width/2, cvs.height/2, cvs.height * 0.1,
-        cvs.width/2, cvs.height/2, cvs.height * 0.85
-      );
-      vig.addColorStop(0, "rgba(8,8,8,0)");
-      vig.addColorStop(1, "rgba(4,4,4,0.92)");
-      ctx.fillStyle = vig;
-      ctx.fillRect(0, 0, cvs.width, cvs.height);
-
-      /* red orb — left side */
-      const ox1 = cvs.width * 0.22 + Math.sin(t.current * 0.7) * 60;
-      const oy1 = cvs.height * 0.45 + Math.cos(t.current * 0.5) * 40;
-      const g1  = ctx.createRadialGradient(ox1, oy1, 0, ox1, oy1, 380);
-      g1.addColorStop(0,   "rgba(180,30,30,0.13)");
-      g1.addColorStop(0.5, "rgba(140,20,20,0.06)");
-      g1.addColorStop(1,   "rgba(100,10,10,0)");
-      ctx.fillStyle = g1;
-      ctx.fillRect(0, 0, cvs.width, cvs.height);
-
-      /* gold orb — upper right */
-      const ox2 = cvs.width * 0.75 + Math.cos(t.current * 0.4) * 50;
-      const oy2 = cvs.height * 0.2  + Math.sin(t.current * 0.6) * 30;
-      const g2  = ctx.createRadialGradient(ox2, oy2, 0, ox2, oy2, 300);
-      g2.addColorStop(0,   "rgba(191,164,106,0.07)");
-      g2.addColorStop(0.5, "rgba(160,130,80,0.03)");
-      g2.addColorStop(1,   "rgba(0,0,0,0)");
-      ctx.fillStyle = g2;
-      ctx.fillRect(0, 0, cvs.width, cvs.height);
-
-      /* particles + connections */
-      pts.forEach(p => {
-        p.x += p.vx; p.y += p.vy;
-        if (p.x < 0) p.x = cvs.width;
-        if (p.x > cvs.width)  p.x = 0;
-        if (p.y < 0) p.y = cvs.height;
-        if (p.y > cvs.height) p.y = 0;
-        ctx.beginPath();
-        ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
-        ctx.fillStyle = `rgba(198,40,40,${p.a})`;
-        ctx.fill();
-      });
-
-      for (let i = 0; i < pts.length; i++) {
-        for (let j = i + 1; j < pts.length; j++) {
-          const dx = pts[i].x - pts[j].x;
-          const dy = pts[i].y - pts[j].y;
-          const d  = Math.sqrt(dx*dx + dy*dy);
-          if (d < 100) {
-            ctx.beginPath();
-            ctx.moveTo(pts[i].x, pts[i].y);
-            ctx.lineTo(pts[j].x, pts[j].y);
-            ctx.strokeStyle = `rgba(180,30,30,${0.07 * (1 - d/100)})`;
-            ctx.lineWidth   = 0.5;
-            ctx.stroke();
-          }
-        }
-      }
-
-      /* subtle scanline */
-      const scanY = ((t.current * 60) % (cvs.height + 200)) - 100;
-      const sg = ctx.createLinearGradient(0, scanY, 0, scanY + 120);
-      sg.addColorStop(0,   "rgba(198,40,40,0)");
-      sg.addColorStop(0.5, "rgba(198,40,40,0.015)");
-      sg.addColorStop(1,   "rgba(198,40,40,0)");
-      ctx.fillStyle = sg;
-      ctx.fillRect(0, scanY, cvs.width, 120);
-
-      /* grid overlay */
-      ctx.strokeStyle = "rgba(255,255,255,0.012)";
-      ctx.lineWidth   = 0.5;
-      const gs = 80;
-      for (let x = 0; x < cvs.width; x += gs) {
-        ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, cvs.height); ctx.stroke();
-      }
-      for (let y = 0; y < cvs.height; y += gs) {
-        ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(cvs.width, y); ctx.stroke();
-      }
-
-      rafRef.current = requestAnimationFrame(draw);
-    };
-    draw();
-    return () => { cancelAnimationFrame(rafRef.current); window.removeEventListener("resize", resize); };
-  }, []);
-
-  return (
-    <canvas
-      ref={canvasRef}
-      style={{ position: "fixed", inset: 0, zIndex: 0, pointerEvents: "none" }}
-    />
-  );
-}
-
 /* ─── TICKER ─────────────────────────────────────────────────── */
 function Ticker() {
   const items = ["Talent Redefined", "500+ Partners", "10,000+ Placed", "Redefining Culture", "India's Premier Staffing", "People First"];
@@ -259,27 +102,18 @@ function Ticker() {
       borderTop:    `1px solid ${C.border}`,
       borderBottom: `1px solid ${C.border}`,
       padding: "10px 0",
-      background: "rgba(255,255,255,0.015)",
+      background: C.inputBg,
       marginBottom: "40px",
       width: "100%"
     }}>
       <div style={{
-        display: "flex",
-        gap: "48px",
-        animation: "ticker 18s linear infinite",
-        width: "max-content",
-        whiteSpace: "nowrap",
+        display: "flex", gap: "48px", animation: "ticker 18s linear infinite", width: "max-content", whiteSpace: "nowrap"
       }}>
         {doubled.map((t, i) => (
           <span key={i} style={{
-            fontSize: "10px",
-            letterSpacing: "3px",
-            textTransform: "uppercase",
-            color: i % 2 === 0 ? C.mutedLight : C.gold,
-            fontFamily: "'DM Sans', sans-serif",
-            display: "flex",
-            alignItems: "center",
-            gap: "16px",
+            fontSize: "10px", letterSpacing: "3px", textTransform: "uppercase",
+            color: i % 2 === 0 ? C.textMuted : C.textHeading,
+            fontFamily: "'DM Sans', sans-serif", display: "flex", alignItems: "center", gap: "16px"
           }}>
             <span style={{ width: "4px", height: "4px", borderRadius: "50%", background: C.red, display: "inline-block" }} />
             {t}
@@ -299,50 +133,24 @@ function Logo({ animate }: { animate?: boolean }) {
       animation: animate ? "scaleIn 0.5s cubic-bezier(0.34,1.56,0.64,1) 0.1s both" : undefined,
     }}>
       <div style={{
-        display: "flex", alignItems: "stretch",
-        border: `1.5px solid ${C.white}`,
-        position: "relative",
-        overflow: "hidden",
+        display: "flex", alignItems: "stretch", border: `1.5px solid ${C.border}`, position: "relative", overflow: "hidden",
       }}>
-        {/* shimmer sweep */}
-        <div style={{
-          position: "absolute", inset: 0,
-          background: "linear-gradient(105deg, transparent 30%, rgba(255,255,255,0.06) 50%, transparent 70%)",
-          backgroundSize: "400px 100%",
-          animation: "shimmer 3s ease-in-out infinite",
-          pointerEvents: "none",
-        }} />
-        <div style={{
-          padding: "8px 10px 8px 14px",
-          borderRight: `1.5px solid rgba(255,255,255,0.3)`,
-        }}>
+        <div style={{ padding: "8px 10px 8px 14px", borderRight: `1.5px solid ${C.border}` }}>
           <span style={{
-            fontFamily: "'Cormorant Garamond', serif",
-            fontSize: "34px",
-            fontWeight: 600,
-            color: C.red,
-            letterSpacing: "3px",
-            lineHeight: 1,
-            display: "block",
+            fontFamily: "'Cormorant Garamond', serif", fontSize: "34px", fontWeight: 600, color: C.red, letterSpacing: "3px", lineHeight: 1, display: "block",
           }}>JBR</span>
         </div>
-        <div style={{
-          display: "flex", flexDirection: "column", justifyContent: "center",
-          padding: "0 12px",
-          gap: "1px",
-        }}>
-          <span style={{ fontFamily: "'DM Sans', sans-serif", fontSize: "9.5px", letterSpacing: "4px", color: C.white, textTransform: "uppercase" }}>STAFFING</span>
-          <span style={{ fontFamily: "'DM Sans', sans-serif", fontSize: "9.5px", letterSpacing: "4px", color: C.offWhite, textTransform: "uppercase" }}>SOLUTIONS</span>
+        <div style={{ display: "flex", flexDirection: "column", justifyContent: "center", padding: "0 12px", gap: "1px" }}>
+          <span style={{ fontFamily: "'DM Sans', sans-serif", fontSize: "9.5px", letterSpacing: "4px", color: C.textHeading, textTransform: "uppercase" }}>STAFFING</span>
+          <span style={{ fontFamily: "'DM Sans', sans-serif", fontSize: "9.5px", letterSpacing: "4px", color: C.textMuted, textTransform: "uppercase" }}>SOLUTIONS</span>
         </div>
       </div>
       <div style={{
-        display: "flex", alignItems: "center", gap: "8px",
-        fontSize: "9px", letterSpacing: "2.5px", color: C.muted,
-        textTransform: "uppercase", fontFamily: "'DM Sans', sans-serif",
+        display: "flex", alignItems: "center", gap: "8px", fontSize: "9px", letterSpacing: "2.5px", color: C.textMuted, textTransform: "uppercase", fontFamily: "'DM Sans', sans-serif",
       }}>
-        <div style={{ width: "20px", height: "0.5px", background: C.gold }} />
+        <div style={{ width: "20px", height: "1px", background: C.border }} />
         Redefining People &amp; Culture
-        <div style={{ width: "20px", height: "0.5px", background: C.gold }} />
+        <div style={{ width: "20px", height: "1px", background: C.border }} />
       </div>
     </div>
   );
@@ -353,37 +161,38 @@ function ModeTabs({ mode, onSwitch }: { mode: Mode; onSwitch: (m: Mode) => void 
   return (
     <div style={{
       display: "flex",
-      background: "rgba(255,255,255,0.03)",
+      background: C.inputBg,
       border: `1px solid ${C.border}`,
       borderRadius: "12px",
       padding: "4px",
       marginBottom: "30px",
       position: "relative",
     }}>
-      {(["signin","signup"] as Mode[]).map(m => (
-        <button
-          key={m}
-          onClick={() => onSwitch(m)}
-          style={{
-            flex: 1,
-            padding: "10px 16px",
-            border: "none",
-            borderRadius: "9px",
-            cursor: "pointer",
-            fontFamily: "'DM Sans', sans-serif",
-            fontSize: "12px",
-            fontWeight: 500,
-            letterSpacing: "0.8px",
-            textTransform: "uppercase",
-            transition: "all 0.3s cubic-bezier(0.4,0,0.2,1)",
-            background: mode === m ? "rgba(198,40,40,0.15)" : "transparent",
-            color: mode === m ? C.white : C.muted,
-            boxShadow: mode === m ? `inset 0 0 0 1px rgba(198,40,40,0.4), 0 2px 12px rgba(198,40,40,0.12)` : "none",
-          }}
-        >
-          {m === "signin" ? "Sign In" : "Register"}
-        </button>
-      ))}
+      {(["signin","signup"] as Mode[]).map(m => {
+        const isActive = mode === m;
+        return (
+          <button
+            key={m}
+            onClick={() => onSwitch(m)}
+            style={{
+              flex: 1, padding: "10px 16px", border: "none", borderRadius: "9px", cursor: "pointer",
+              fontFamily: "'DM Sans', sans-serif", fontSize: "12px", fontWeight: 600, letterSpacing: "0.8px", textTransform: "uppercase",
+              transition: "all 0.3s cubic-bezier(0.4,0,0.2,1)",
+              background: isActive ? C.redActiveBg : "transparent",
+              color: isActive ? C.red : C.textLabel,
+              position: "relative", overflow: "hidden",
+            }}
+          >
+            {isActive && (
+              <div style={{
+                position: "absolute", left: 0, top: "50%", transform: "translateY(-50%)",
+                width: "3px", height: "16px", background: C.red, borderRadius: "0 2px 2px 0"
+              }} />
+            )}
+            {m === "signin" ? "Sign In" : "Register"}
+          </button>
+        );
+      })}
     </div>
   );
 }
@@ -402,35 +211,30 @@ interface FieldProps {
 }
 function Field({ label, hint, type="text", placeholder, value, onChange, autoComplete, icon, delay=0 }: FieldProps) {
   const [focused, setFocused] = useState(false);
+  const [hovered, setHovered] = useState(false);
   const [showPwd, setShowPwd] = useState(false);
   const isPwd = type === "password";
-  const hasVal = value.length > 0;
 
   return (
     <div className="form-field" style={{ marginBottom: "16px", animationDelay: `${delay}s` }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "7px" }}>
         <label style={{
-          fontSize: "10.5px", fontWeight: 500, letterSpacing: "1.2px",
-          textTransform: "uppercase", fontFamily: "'DM Sans',sans-serif",
-          color: focused ? C.offWhite : C.muted,
-          transition: "color 0.2s",
+          fontSize: "10.5px", fontWeight: 600, letterSpacing: "1.2px", textTransform: "uppercase",
+          fontFamily: "'DM Sans',sans-serif", color: C.textLabel, transition: "color 0.2s",
         }}>
           {label}
         </label>
         {hint && (
           <span style={{
-            fontSize: "11px", color: C.red, cursor: "pointer",
-            fontFamily: "'DM Sans',sans-serif",
-            borderBottom: `1px solid rgba(198,40,40,0.3)`,
+            fontSize: "11px", color: C.red, cursor: "pointer", fontFamily: "'DM Sans',sans-serif", borderBottom: `1px solid ${C.redActiveBg}`,
           }}>{hint}</span>
         )}
       </div>
       <div style={{ position: "relative" }}>
         {icon && (
           <div style={{
-            position: "absolute", left: "14px", top: "50%",
-            transform: "translateY(-50%)", color: focused ? C.red : C.muted,
-            transition: "color 0.2s", display: "flex", pointerEvents: "none",
+            position: "absolute", left: "14px", top: "50%", transform: "translateY(-50%)",
+            color: focused ? C.red : C.textMuted, transition: "color 0.2s", display: "flex", pointerEvents: "none",
           }}>{icon}</div>
         )}
         <input
@@ -440,30 +244,23 @@ function Field({ label, hint, type="text", placeholder, value, onChange, autoCom
           onChange={e => onChange(e.target.value)}
           onFocus={() => setFocused(true)}
           onBlur={() => setFocused(false)}
+          onMouseEnter={() => setHovered(true)}
+          onMouseLeave={() => setHovered(false)}
           autoComplete={autoComplete}
           style={{
-            width: "100%",
-            padding: `13px ${isPwd ? "44px" : "14px"} 13px ${icon ? "42px" : "14px"}`,
-            background: focused ? C.inputBgFocus : C.inputBg,
-            border: `1px solid ${focused ? C.borderFocus : hasVal ? "rgba(255,255,255,0.08)" : C.border}`,
-            borderRadius: "10px",
-            color: C.offWhite,
-            fontSize: "14px",
-            fontFamily: "'DM Sans',sans-serif",
-            transition: "all 0.25s cubic-bezier(0.4,0,0.2,1)",
-            boxSizing: "border-box",
-            boxShadow: focused ? `0 0 0 3px rgba(198,40,40,0.1), 0 4px 20px rgba(0,0,0,0.4)` : "none",
+            width: "100%", padding: `13px ${isPwd ? "44px" : "14px"} 13px ${icon ? "42px" : "14px"}`,
+            background: focused ? C.surface : C.inputBg,
+            border: `1px solid ${focused ? C.red : hovered ? C.borderHover : C.border}`,
+            borderRadius: "10px", color: C.textBody, fontSize: "14px", fontFamily: "'DM Sans',sans-serif",
+            transition: "all 0.25s cubic-bezier(0.4,0,0.2,1)", boxSizing: "border-box",
           }}
         />
         {isPwd && (
           <button
-            type="button"
-            onClick={() => setShowPwd(s => !s)}
+            type="button" onClick={() => setShowPwd(s => !s)}
             style={{
-              position: "absolute", right: "14px", top: "50%",
-              transform: "translateY(-50%)",
-              background: "none", border: "none", cursor: "pointer",
-              color: C.muted, padding: 0, display: "flex", transition: "color 0.2s",
+              position: "absolute", right: "14px", top: "50%", transform: "translateY(-50%)", background: "none", border: "none",
+              cursor: "pointer", color: C.textMuted, padding: 0, display: "flex", transition: "color 0.2s",
             }}
           >
             {showPwd ? (
@@ -493,21 +290,18 @@ function PwdStrength({ pwd }: { pwd: string }) {
   if (/[A-Z]/.test(pwd))        s++;
   if (/[0-9]/.test(pwd))        s++;
   if (/[^A-Za-z0-9]/.test(pwd)) s++;
-  const cols = ["#EF5350","#FF9800","#9CCC65","#66BB6A"];
+  const cols = ["#EF5350","#F59E0B","#10B981","#059669"];
   const labs = ["Weak","Fair","Good","Strong"];
   return (
     <div style={{ marginBottom: "16px" }}>
       <div style={{ display: "flex", gap: "4px", marginBottom: "5px" }}>
         {[0,1,2,3].map(i => (
           <div key={i} style={{
-            flex: 1, height: "2px", borderRadius: "1px",
-            background: i < s ? cols[s-1] : "rgba(255,255,255,0.08)",
-            transition: "background 0.35s cubic-bezier(0.4,0,0.2,1)",
-            boxShadow: i < s ? `0 0 6px ${cols[s-1]}60` : "none",
+            flex: 1, height: "3px", borderRadius: "2px", background: i < s ? cols[s-1] : C.border, transition: "background 0.35s cubic-bezier(0.4,0,0.2,1)",
           }} />
         ))}
       </div>
-      <span style={{ fontSize: "10px", color: s > 0 ? cols[s-1] : C.muted, fontFamily: "'DM Sans',sans-serif", letterSpacing: "0.5px" }}>
+      <span style={{ fontSize: "10px", color: s > 0 ? cols[s-1] : C.textMuted, fontFamily: "'DM Sans',sans-serif", letterSpacing: "0.5px" }}>
         {s > 0 ? labs[s-1] : ""}
       </span>
     </div>
@@ -527,50 +321,41 @@ function PrimaryBtn({ label, loading, onClick }: { label: string; loading?: bool
       onMouseUp={() => setPress(false)}
       disabled={loading}
       style={{
-        width: "100%",
-        padding: "14px",
-        background: press
-          ? "#A31515"
-          : hov
-          ? `linear-gradient(135deg, #D32F2F, #C62828)`
-          : `linear-gradient(135deg, #C62828, #B71C1C)`,
-        border: `1px solid ${hov ? "rgba(255,100,100,0.3)" : "rgba(198,40,40,0.4)"}`,
-        borderRadius: "10px",
-        color: C.white,
-        fontSize: "13px",
-        fontWeight: 500,
-        letterSpacing: "1.5px",
-        textTransform: "uppercase",
-        fontFamily: "'DM Sans',sans-serif",
-        cursor: loading ? "not-allowed" : "pointer",
-        transition: "all 0.25s cubic-bezier(0.4,0,0.2,1)",
+        width: "100%", padding: "14px",
+        background: `linear-gradient(135deg, ${C.redBright}, ${C.red})`,
+        border: "none", borderRadius: "10px", color: C.white, fontSize: "13px", fontWeight: 600, letterSpacing: "1.5px", textTransform: "uppercase", fontFamily: "'DM Sans',sans-serif",
+        cursor: loading ? "not-allowed" : "pointer", transition: "all 0.25s cubic-bezier(0.4,0,0.2,1)",
         transform: press ? "scale(0.985) translateY(1px)" : hov ? "translateY(-2px)" : "none",
-        boxShadow: hov
-          ? `0 8px 32px rgba(198,40,40,0.45), 0 2px 8px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.12)`
-          : `0 4px 16px rgba(198,40,40,0.25), inset 0 1px 0 rgba(255,255,255,0.08)`,
-        display: "flex", alignItems: "center", justifyContent: "center", gap: "8px",
-        marginTop: "4px",
-        position: "relative",
-        overflow: "hidden",
-        opacity: loading ? 0.7 : 1,
+        boxShadow: hov ? `0 6px 20px ${C.redGlow}, 0 2px 6px rgba(0,0,0,0.08)` : `0 4px 16px ${C.redGlow}`,
+        display: "flex", alignItems: "center", justifyContent: "center", gap: "8px", marginTop: "4px", position: "relative", overflow: "hidden", opacity: loading ? 0.7 : 1,
       }}
     >
-      {/* shimmer on hover */}
-      {hov && !loading && (
-        <div style={{
-          position: "absolute", inset: 0,
-          background: "linear-gradient(105deg, transparent 20%, rgba(255,255,255,0.06) 50%, transparent 80%)",
-          backgroundSize: "300px 100%",
-          animation: "shimmer 1.5s ease-in-out infinite",
-        }} />
-      )}
       {loading ? (
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"
-          style={{ animation: "spin 0.7s linear infinite" }}>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" style={{ animation: "spin 0.7s linear infinite" }}>
           <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>
         </svg>
       ) : null}
       <span style={{ position: "relative", zIndex: 1 }}>{loading ? "Processing…" : label}</span>
+    </button>
+  );
+}
+
+/* ─── GHOST BUTTON ───────────────────────────────────────────── */
+function GhostBtn({ label, onClick }: { label: string; onClick: () => void }) {
+  const [hov, setHov] = useState(false);
+  return (
+    <button
+      onClick={onClick}
+      onMouseEnter={() => setHov(true)}
+      onMouseLeave={() => setHov(false)}
+      style={{
+        width: "100%", padding: "12px", background: hov ? C.redActiveBg : "transparent",
+        border: `1px solid ${hov ? C.red : C.border}`, borderRadius: "10px",
+        color: hov ? C.red : C.textLabel, fontSize: "13px", fontWeight: 600, fontFamily: "'DM Sans',sans-serif",
+        cursor: "pointer", transition: "all 0.2s ease", marginTop: "8px",
+      }}
+    >
+      {label}
     </button>
   );
 }
@@ -580,28 +365,21 @@ function SuccessFlash({ visible, mode }: { visible: boolean; mode: Mode }) {
   if (!visible) return null;
   return (
     <div style={{
-      position: "absolute", inset: 0, zIndex: 20,
-      background: "rgba(8,8,8,0.96)",
-      display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
-      borderRadius: "24px",
-      animation: "fadeIn 0.3s ease both",
+      position: "absolute", inset: 0, zIndex: 20, background: C.surface,
+      display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", borderRadius: "24px", animation: "fadeIn 0.3s ease both",
     }}>
       <div style={{
-        width: "64px", height: "64px", borderRadius: "50%",
-        border: `1.5px solid ${C.red}`,
-        display: "flex", alignItems: "center", justifyContent: "center",
-        animation: "successPop 0.5s cubic-bezier(0.34,1.56,0.64,1) both",
-        marginBottom: "20px",
-        boxShadow: `0 0 40px ${C.redGlow}`,
+        width: "64px", height: "64px", borderRadius: "50%", border: `1.5px solid ${C.red}`, background: C.redActiveBg,
+        display: "flex", alignItems: "center", justifyContent: "center", animation: "successPop 0.5s cubic-bezier(0.34,1.56,0.64,1) both", marginBottom: "20px",
       }}>
         <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke={C.red} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <polyline points="20 6 9 17 4 12" />
         </svg>
       </div>
-      <p style={{ color: C.white, fontSize: "16px", fontFamily: "'Cormorant Garamond',serif", fontWeight: 500, letterSpacing: "1px", marginBottom: "8px" }}>
+      <p style={{ color: C.textHeading, fontSize: "18px", fontFamily: "'Cormorant Garamond',serif", fontWeight: 600, letterSpacing: "1px", marginBottom: "8px" }}>
         {mode === "signin" ? "Welcome back." : "Account created."}
       </p>
-      <p style={{ color: C.muted, fontSize: "12px", fontFamily: "'DM Sans',sans-serif", letterSpacing: "0.5px" }}>
+      <p style={{ color: C.textMuted, fontSize: "13px", fontFamily: "'DM Sans',sans-serif", letterSpacing: "0.5px" }}>
         Redirecting…
       </p>
     </div>
@@ -611,81 +389,36 @@ function SuccessFlash({ visible, mode }: { visible: boolean; mode: Mode }) {
 /* ─── LEFT PANEL ─────────────────────────────────────────────── */
 function BrandPanel() {
   return (
-    <div style={{
-      flex: 4, // 40% width for the Left Panel
-      display: "flex", flexDirection: "column", 
-      justifyContent: "center", 
-      padding: "52px 8%", 
-      borderRight: `1px solid ${C.border}`,
-      position: "relative",
-      overflow: "hidden",
-      animation: "slideRight 0.7s cubic-bezier(0.4,0,0.2,1) both",
+    <div className="brand-hide" style={{
+      flex: 4, display: "flex", flexDirection: "column", justifyContent: "center", padding: "52px 8%",
+      background: C.panel, borderRight: `1px solid ${C.border}`, position: "relative", overflow: "hidden", animation: "slideRight 0.7s cubic-bezier(0.4,0,0.2,1) both",
     }}>
-      {/* Background geometry */}
-      <div style={{
-        position: "absolute", bottom: "-80px", right: "-80px",
-        width: "320px", height: "320px",
-        border: `1px solid rgba(198,40,40,0.07)`,
-        borderRadius: "50%", pointerEvents: "none",
-        animation: "floatA 14s ease-in-out infinite",
-      }} />
-      <div style={{
-        position: "absolute", bottom: "-40px", right: "-40px",
-        width: "200px", height: "200px",
-        border: `1px solid rgba(191,164,106,0.06)`,
-        borderRadius: "50%", pointerEvents: "none",
-        animation: "floatB 10s ease-in-out infinite",
-      }} />
-      <div style={{
-        position: "absolute", top: "30%", left: "-60px",
-        width: "180px", height: "180px",
-        border: `1px solid rgba(198,40,40,0.04)`,
-        borderRadius: "50%", pointerEvents: "none",
-        animation: "floatC 12s ease-in-out infinite",
-      }} />
-
-      {/* Top accent & Main Text */}
-      <div style={{ marginBottom: "12vh" }}> 
+      <div style={{ marginBottom: "12vh" }}>
         <div style={{
-          width: "0px", height: "2px",
-          background: `linear-gradient(to right, ${C.red}, ${C.gold})`,
-          marginBottom: "48px",
-          borderRadius: "1px",
-          animation: "lineGrow 1s cubic-bezier(0.4,0,0.2,1) 0.3s both",
+          width: "0px", height: "3px", background: `linear-gradient(to right, ${C.redBright}, ${C.red})`, marginBottom: "48px", borderRadius: "2px", animation: "lineGrow 1s cubic-bezier(0.4,0,0.2,1) 0.3s both",
         }} />
-
         <div style={{ animation: "fadeUp 0.7s cubic-bezier(0.4,0,0.2,1) 0.2s both" }}>
           <div style={{
-            fontSize: "11px", letterSpacing: "3.5px", textTransform: "uppercase",
-            color: C.gold, fontFamily: "'DM Sans',sans-serif",
-            marginBottom: "20px", display: "flex", alignItems: "center", gap: "10px",
+            fontSize: "11px", letterSpacing: "3.5px", textTransform: "uppercase", color: C.textLabel, fontFamily: "'DM Sans',sans-serif", fontWeight: 600, marginBottom: "20px", display: "flex", alignItems: "center", gap: "10px",
           }}>
-            <div style={{ width: "20px", height: "0.5px", background: C.gold }} />
+            <div style={{ width: "20px", height: "1px", background: C.borderHover }} />
             Est. 2015
           </div>
           <h1 style={{
-            fontFamily: "'Cormorant Garamond', serif",
-            fontWeight: 300,
-            fontSize: "46px",
-            lineHeight: 1.1,
-            color: C.white,
-            letterSpacing: "-0.5px",
-            marginBottom: "8px",
+            fontFamily: "'Cormorant Garamond', serif", fontWeight: 400, fontSize: "46px", lineHeight: 1.1, color: C.textHeading, letterSpacing: "-0.5px", marginBottom: "8px",
           }}>
             People are
-            <br />our <span style={{ color: C.red, fontWeight: 500, fontStyle: "italic" }}>greatest</span>
+            <br />our <span style={{ color: C.red, fontWeight: 600, fontStyle: "italic" }}>greatest</span>
             <br />asset.
           </h1>
           <p style={{
-            fontSize: "13px", color: C.mutedLight, lineHeight: 1.75,
-            fontFamily: "'DM Sans',sans-serif", marginTop: "20px", maxWidth: "420px",
+            fontSize: "14px", color: C.textMuted, lineHeight: 1.75, fontFamily: "'DM Sans',sans-serif", marginTop: "20px", maxWidth: "420px",
           }}>
             We connect exceptional talent with organisations that value culture. Your career journey deserves a partner that truly understands.
           </p>
         </div>
       </div>
 
-      {/* Stats */}
       <div>
         <div style={{ height: "1px", background: C.border, marginBottom: "28px" }} />
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "0" }}>
@@ -694,24 +427,13 @@ function BrandPanel() {
             { num: "10K+", label: "Placed" },
             { num: "98%",  label: "Satisfaction" },
           ].map((s, i) => (
-            <div key={s.label} className="stat-item" style={{
-              borderRight: i < 2 ? `1px solid ${C.border}` : "none",
-              paddingRight: i < 2 ? "20px" : "0",
-              paddingLeft: i > 0 ? "20px" : "0",
-            }}>
-              <div style={{
-                fontFamily: "'Cormorant Garamond', serif",
-                fontSize: "26px", fontWeight: 500,
-                color: C.white, lineHeight: 1,
-                marginBottom: "4px",
-              }}>{s.num}</div>
-              <div style={{ fontSize: "10px", color: C.muted, letterSpacing: "1.5px", textTransform: "uppercase", fontFamily: "'DM Sans',sans-serif" }}>
-                {s.label}
-              </div>
+            <div key={s.label} className="stat-item" style={{ borderRight: i < 2 ? `1px solid ${C.border}` : "none", paddingRight: i < 2 ? "20px" : "0", paddingLeft: i > 0 ? "20px" : "0" }}>
+              <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: "26px", fontWeight: 600, color: C.textHeading, lineHeight: 1, marginBottom: "6px" }}>{s.num}</div>
+              <div style={{ fontSize: "10.5px", fontWeight: 600, color: C.textLabel, letterSpacing: "1.5px", textTransform: "uppercase", fontFamily: "'DM Sans',sans-serif" }}>{s.label}</div>
             </div>
           ))}
         </div>
-        <div style={{ marginTop: "28px", fontSize: "10px", color: "rgba(107,107,104,0.4)", letterSpacing: "0.5px", fontFamily: "'DM Sans',sans-serif" }}>
+        <div style={{ marginTop: "28px", fontSize: "11px", color: C.textHint, letterSpacing: "0.5px", fontFamily: "'DM Sans',sans-serif" }}>
           © 2026 JBR Staffing Solutions Pvt. Ltd.
         </div>
       </div>
@@ -727,7 +449,6 @@ export default function JBRAuth() {
   const [formKey,   setFormKey]   = useState(0);
   const [opacity,   setOpacity]   = useState(1);
   const [yOff,      setYOff]      = useState(0);
-  const [dir,       setDir]       = useState<1|-1>(1);
 
   const [email,     setEmail]     = useState("");
   const [pwd,       setPwd]       = useState("");
@@ -738,8 +459,7 @@ export default function JBRAuth() {
 
   const switchMode = useCallback((next: Mode) => {
     if (next === mode) return;
-    const d: 1|-1 = next === "signup" ? 1 : -1;
-    setDir(d);
+    const d = next === "signup" ? 1 : -1;
     setOpacity(0);
     setYOff(-12 * d);
     setTimeout(() => {
@@ -777,122 +497,82 @@ export default function JBRAuth() {
   return (
     <>
       <style>{GLOBAL_CSS}</style>
-      <CinematicBackground />
+
+      {/* Subtle top accent at the very top of the page */}
+      <div style={{
+        position: "fixed", top: 0, left: 0, right: 0, height: "3px",
+        background: `linear-gradient(to right, ${C.redBright}, ${C.red})`,
+        zIndex: 50
+      }} />
 
       <div style={{
-        minHeight: "100vh",
-        display: "flex", alignItems: "stretch", 
-        padding: "24px",
-        position: "relative", zIndex: 1,
-        fontFamily: "'DM Sans', sans-serif",
+        minHeight: "100vh", display: "flex", alignItems: "stretch", padding: "32px",
+        position: "relative", zIndex: 1, fontFamily: "'DM Sans', sans-serif",
       }}>
         <div style={{
-          display: "flex",
-          width: "100%", 
-          background: "rgba(11,11,11,0.88)",
-          border: `1px solid ${C.border}`,
-          borderRadius: "24px",
-          overflow: "hidden",
-          backdropFilter: "blur(40px)",
-          WebkitBackdropFilter: "blur(40px)",
-          boxShadow: `0 40px 100px rgba(0,0,0,0.7), 0 0 0 1px rgba(255,255,255,0.04), inset 0 1px 0 rgba(255,255,255,0.05)`,
-          animation: "fadeUp 0.6s cubic-bezier(0.4,0,0.2,1) 0.05s both",
-          position: "relative",
+          display: "flex", width: "100%", background: C.card,
+          border: `1px solid ${C.border}`, borderRadius: "24px", overflow: "hidden",
+          boxShadow: "0 1px 3px rgba(0,0,0,0.06), 0 4px 16px rgba(0,0,0,0.06)",
+          animation: "fadeUp 0.6s cubic-bezier(0.4,0,0.2,1) 0.05s both", position: "relative",
         }}>
 
-          {/* Brand panel */}
           <BrandPanel />
 
-          {/* Auth panel */}
           <div style={{
-            flex: 6, // 60% width for the Right Panel 
-            padding: "48px 4%",  
-            display: "flex", flexDirection: "column",
-            justifyContent: "center", 
-            position: "relative",
-            overflowY: "auto",
+            flex: 6, padding: "48px 4%", display: "flex", flexDirection: "column", justifyContent: "center", position: "relative", overflowY: "auto",
           }}>
-            
-            {/* Group Ticker, Logo and Form together in the center */}
             <div style={{ width: "100%", padding: "0 2%" }}>
               <Ticker />
             </div>
 
-            <div style={{
-              display: "flex", flexDirection: "column",
-              alignItems: "center",
-              width: "100%", maxWidth: "440px",
-              margin: "0 auto", 
-            }}>
+            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", width: "100%", maxWidth: "440px", margin: "0 auto" }}>
               <Logo animate />
               
               <div style={{ width: "100%" }}>
                 <ModeTabs mode={mode} onSwitch={switchMode} />
 
-                {/* Form */}
                 <div
                   key={formKey}
-                  style={{
-                    opacity,
-                    transform: `translateY(${yOff}px)`,
-                    transition: "opacity 0.28s ease, transform 0.35s cubic-bezier(0.4,0,0.2,1)",
-                  }}
+                  style={{ opacity, transform: `translateY(${yOff}px)`, transition: "opacity 0.28s ease, transform 0.35s cubic-bezier(0.4,0,0.2,1)" }}
                 >
                   {mode === "signin" ? (
                     <>
-                      <Field label="Email Address" type="email" placeholder="you@jbrstaffingsolutions.com"
-                        value={email} onChange={setEmail} autoComplete="email" icon={emailIcon} delay={0.05} />
-                      <Field label="Password" type="password" placeholder="Enter your password"
-                        value={pwd} onChange={setPwd} autoComplete="current-password" icon={lockIcon}
-                        hint="Forgot password?" delay={0.1} />
+                      <Field label="Email Address" type="email" placeholder="you@jbrstaffingsolutions.com" value={email} onChange={setEmail} autoComplete="email" icon={emailIcon} delay={0.05} />
+                      <Field label="Password" type="password" placeholder="Enter your password" value={pwd} onChange={setPwd} autoComplete="current-password" icon={lockIcon} hint="Forgot password?" delay={0.1} />
                       <PrimaryBtn label="Sign In" loading={loading} onClick={submit} />
-                      <p style={{ textAlign: "center", marginTop: "20px", fontSize: "13px", color: C.muted }}>
-                        No account?{" "}
-                        <button onClick={() => switchMode("signup")} style={{
-                          background: "none", border: "none", cursor: "pointer",
-                          color: C.red, fontSize: "13px", fontFamily: "'DM Sans',sans-serif",
-                          fontWeight: 500, padding: 0,
-                          borderBottom: `1px solid rgba(198,40,40,0.35)`,
-                          paddingBottom: "1px",
-                        }}>Create one now</button>
-                      </p>
+                      
+                      <div style={{ display: "flex", alignItems: "center", margin: "24px 0 8px" }}>
+                         <div style={{ flex: 1, height: "1px", background: C.border }} />
+                         <span style={{ padding: "0 12px", fontSize: "11px", color: C.textHint, textTransform: "uppercase", letterSpacing: "1px" }}>Or</span>
+                         <div style={{ flex: 1, height: "1px", background: C.border }} />
+                      </div>
+                      
+                      <GhostBtn label="Create an Account" onClick={() => switchMode("signup")} />
                     </>
                   ) : (
                     <>
                       <div style={{ display: "flex", gap: "12px" }}>
-                        <div style={{ flex: 1 }}>
-                          <Field label="First" placeholder="Jane" value={first} onChange={setFirst}
-                            autoComplete="given-name" icon={userIcon} delay={0.05} />
-                        </div>
-                        <div style={{ flex: 1 }}>
-                          <Field label="Last" placeholder="Doe" value={last} onChange={setLast}
-                            autoComplete="family-name" delay={0.1} />
-                        </div>
+                        <div style={{ flex: 1 }}><Field label="First" placeholder="Jane" value={first} onChange={setFirst} autoComplete="given-name" icon={userIcon} delay={0.05} /></div>
+                        <div style={{ flex: 1 }}><Field label="Last" placeholder="Doe" value={last} onChange={setLast} autoComplete="family-name" delay={0.1} /></div>
                       </div>
-                      <Field label="Work Email" type="email" placeholder="you@jbrstaffingsolutions.com"
-                        value={signEmail} onChange={setSignEmail} autoComplete="email"
-                        icon={emailIcon} hint="@jbrstaffingsolutions.com" delay={0.15} />
-                      <Field label="Password" type="password" placeholder="Create a strong password"
-                        value={signPwd} onChange={setSignPwd} autoComplete="new-password"
-                        icon={lockIcon} delay={0.2} />
+                      <Field label="Work Email" type="email" placeholder="you@jbrstaffingsolutions.com" value={signEmail} onChange={setSignEmail} autoComplete="email" icon={emailIcon} hint="@jbrstaffingsolutions.com" delay={0.15} />
+                      <Field label="Password" type="password" placeholder="Create a strong password" value={signPwd} onChange={setSignPwd} autoComplete="new-password" icon={lockIcon} delay={0.2} />
                       <PwdStrength pwd={signPwd} />
-                      <p style={{ fontSize: "11px", color: "rgba(107,107,104,0.5)", lineHeight: 1.7, marginBottom: "16px" }}>
+                      <p style={{ fontSize: "11px", color: C.textMuted, lineHeight: 1.7, marginBottom: "16px" }}>
                         By registering you agree to our{" "}
-                        <span style={{ color: C.mutedLight, cursor: "pointer", borderBottom: `1px solid rgba(154,152,150,0.3)` }}>Terms</span>
+                        <span style={{ color: C.textLabel, fontWeight: 600, cursor: "pointer", borderBottom: `1px solid ${C.borderHover}` }}>Terms</span>
                         {" "}&amp;{" "}
-                        <span style={{ color: C.mutedLight, cursor: "pointer", borderBottom: `1px solid rgba(154,152,150,0.3)` }}>Privacy Policy</span>.
+                        <span style={{ color: C.textLabel, fontWeight: 600, cursor: "pointer", borderBottom: `1px solid ${C.borderHover}` }}>Privacy Policy</span>.
                       </p>
                       <PrimaryBtn label="Create Account" loading={loading} onClick={submit} />
-                      <p style={{ textAlign: "center", marginTop: "20px", fontSize: "13px", color: C.muted }}>
-                        Already registered?{" "}
-                        <button onClick={() => switchMode("signin")} style={{
-                          background: "none", border: "none", cursor: "pointer",
-                          color: C.red, fontSize: "13px", fontFamily: "'DM Sans',sans-serif",
-                          fontWeight: 500, padding: 0,
-                          borderBottom: `1px solid rgba(198,40,40,0.35)`,
-                          paddingBottom: "1px",
-                        }}>Sign in</button>
-                      </p>
+                      
+                      <div style={{ display: "flex", alignItems: "center", margin: "24px 0 8px" }}>
+                         <div style={{ flex: 1, height: "1px", background: C.border }} />
+                         <span style={{ padding: "0 12px", fontSize: "11px", color: C.textHint, textTransform: "uppercase", letterSpacing: "1px" }}>Or</span>
+                         <div style={{ flex: 1, height: "1px", background: C.border }} />
+                      </div>
+
+                      <GhostBtn label="Sign in to existing account" onClick={() => switchMode("signin")} />
                     </>
                   )}
                 </div>
