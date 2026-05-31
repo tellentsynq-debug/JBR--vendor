@@ -1,9 +1,12 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useRouter } from "next/navigation";
-import { LogOut, Plus, Search, Copy, Check, Edit2, EyeOff, X, Calendar as CalendarIcon } from "lucide-react";
+import {
+  LogOut, Plus, Search, Copy, Check, Edit2, EyeOff, Eye, X,
+  Calendar as CalendarIcon, Trash2, AlertTriangle, RefreshCw
+} from "lucide-react";
 import Sidebar from "../components/Sidebar";
 
 /* ─── DESIGN TOKENS ─────────────────────────────────────────── */
@@ -30,105 +33,126 @@ const C = {
   pendingText: "#3B82F6",
   alertBg: "rgba(198,40,40,0.08)",
   alertText: "#C62828",
+  inactiveBg: "rgba(107,114,128,0.10)",
+  inactiveText: "#6B7280",
 };
 
-/* ─── GLOBAL CSS & ANIMATIONS ────────────────────────────────── */
+/* ─── GLOBAL CSS ─────────────────────────────────────────────── */
 const GLOBAL_CSS = `
   @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;500;600;700&family=DM+Sans:wght@300;400;500;600;700&display=swap');
-
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
   body { background: ${C.bg}; color: ${C.textBody}; font-family: 'DM Sans', sans-serif; overflow-x: hidden; }
-
   ::-webkit-scrollbar { width: 8px; height: 8px; }
   ::-webkit-scrollbar-track { background: ${C.bg}; }
   ::-webkit-scrollbar-thumb { background: ${C.borderHover}; border-radius: 4px; }
   ::-webkit-scrollbar-thumb:hover { background: rgba(0,0,0,0.25); }
-
   .clean-card {
     background: ${C.surface};
     border: 1px solid ${C.border};
     border-radius: 16px;
     box-shadow: 0 1px 3px rgba(0,0,0,0.06), 0 4px 16px rgba(0,0,0,0.06);
   }
-
-  .table-container {
-    width: 100%;
-    overflow-x: auto;
-  }
-  .table-min-width {
-    min-width: 1000px;
-  }
-  
-  input[type="date"]::-webkit-calendar-picker-indicator {
-    cursor: pointer;
-    opacity: 0.6;
-  }
-
-  @keyframes spin {
-    to { transform: rotate(360deg); }
-  }
+  .table-container { width: 100%; overflow-x: auto; }
+  .table-min-width { min-width: 1100px; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
 `;
 
-/* ─── MOCK DATA ──────────────────────────────────────────────── */
-const CAMPAIGNS_DATA = [
-  { id: 1, name: "JBR Main Hiring", start: "June 26th, 2025", end: "May 31st, 2026", status: "Active", linkStatus: "Working" },
-  { id: 2, name: "Summer Tech Leads", start: "July 15th, 2025", end: "Aug 30th, 2025", status: "Ended", linkStatus: "Expired" },
-  { id: 3, name: "Warehouse Associates Q4", start: "Oct 1st, 2025", end: "Dec 31st, 2025", status: "Active", linkStatus: "Working" },
-  { id: 4, name: "Admin Support Staff", start: "Jan 10th, 2026", end: "Mar 20th, 2026", status: "Draft", linkStatus: "Pending" },
-];
+/* ─── TYPES ──────────────────────────────────────────────────── */
+interface Campaign {
+  id: number;
+  name: string;
+  start_date: string;
+  end_date: string;
+  status: string; // "active" | "inactive" | "draft" | etc.
+  created_at?: string;
+  link?: string;
+}
+
+/* ─── HELPERS ────────────────────────────────────────────────── */
+function getToken(): string | null {
+  return localStorage.getItem("jbr_token");
+}
+
+function authHeaders(includeContentType = false): Record<string, string> {
+  const token = getToken();
+  const headers: Record<string, string> = {};
+  if (token) headers["Authorization"] = `Bearer ${token}`;
+  if (includeContentType) headers["Content-Type"] = "application/json";
+  return headers;
+}
+
+function formatDate(iso: string): string {
+  if (!iso) return "—";
+  const d = new Date(iso);
+  return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+}
+
+function toInputDate(iso: string): string {
+  if (!iso) return "";
+  return iso.split("T")[0];
+}
 
 /* ─── ANIMATION VARIANTS ─────────────────────────────────────── */
 const easeOutCirc = [0.0, 0.55, 0.45, 1];
-const containerVars = { hidden: { opacity: 0 }, show: { opacity: 1, transition: { staggerChildren: 0.08, delayChildren: 0.1 } }};
-const itemVars = { hidden: { opacity: 0, y: 15 }, show: { opacity: 1, y: 0, transition: { type: "spring", stiffness: 200, damping: 20 } }};
+const containerVars = {
+  hidden: { opacity: 0 },
+  show: { opacity: 1, transition: { staggerChildren: 0.07, delayChildren: 0.1 } }
+};
+const itemVars = {
+  hidden: { opacity: 0, y: 12 },
+  show: { opacity: 1, y: 0, transition: { type: "spring", stiffness: 200, damping: 22 } }
+};
 
-/* ─── COMPONENTS ─────────────────────────────────────────────── */
-
+/* ─── TOP NAV ────────────────────────────────────────────────── */
 function TopNav() {
   const router = useRouter();
-  const [user, setUser] = useState<{ firstName?: string, email?: string } | null>(null);
+  const [user, setUser] = useState<{ firstName?: string; email?: string } | null>(null);
 
   useEffect(() => {
     const storedUser = localStorage.getItem("jbr_user");
     if (storedUser) {
-      try {
-        setUser(JSON.parse(storedUser));
-      } catch (e) {
-        console.error("Failed to parse user data", e);
-      }
+      try { setUser(JSON.parse(storedUser)); } catch { /* ignore */ }
     }
   }, []);
 
   const handleSignOut = () => {
     localStorage.removeItem("jbr_token");
     localStorage.removeItem("jbr_user");
-    router.push("/"); // Directs back to auth/home
+    router.push("/");
   };
 
   return (
-    <motion.header 
-      initial={{ y: -20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ duration: 0.6, ease: easeOutCirc }}
+    <motion.header
+      initial={{ y: -20, opacity: 0 }} animate={{ y: 0, opacity: 1 }}
+      transition={{ duration: 0.6, ease: easeOutCirc }}
       style={{
         display: "flex", justifyContent: "space-between", alignItems: "center",
         padding: "20px 40px", borderBottom: `1px solid ${C.border}`,
-        background: C.surface,
-        position: "sticky", top: 0, zIndex: 10
-      }}>
-      
-      <div style={{ display: "flex", alignItems: "center" }}>
-        <span style={{ fontSize: "12px", letterSpacing: "1px", textTransform: "uppercase", color: C.textHeading, fontWeight: 600 }}>Campaign Link</span>
-      </div>
-      
+        background: C.surface, position: "sticky", top: 0, zIndex: 10
+      }}
+    >
+      <span style={{ fontSize: "12px", letterSpacing: "1px", textTransform: "uppercase", color: C.textHeading, fontWeight: 600 }}>
+        Campaign Link
+      </span>
       <div style={{ display: "flex", alignItems: "center", gap: "24px" }}>
         <span style={{ fontSize: "13px", color: C.textMuted }}>
-          Welcome, <span style={{ color: C.textHeading, fontWeight: 500 }}>
+          Welcome,{" "}
+          <span style={{ color: C.textHeading, fontWeight: 500 }}>
             {user ? (user.firstName ? `${user.firstName} (${user.email})` : user.email) : "Loading..."}
           </span>
         </span>
-        <motion.button 
+        <motion.button
           onClick={handleSignOut}
-          whileHover={{ backgroundColor: C.redActiveBg, borderColor: C.red, color: C.red }} whileTap={{ scale: 0.98 }}
-          style={{ display: "flex", alignItems: "center", gap: "8px", padding: "8px 16px", background: "transparent", border: `1px solid ${C.border}`, borderRadius: "6px", color: C.textLabel, fontSize: "13px", fontWeight: 500, cursor: "pointer", transition: "all 0.2s ease" }}>
+          whileHover={{ backgroundColor: C.redActiveBg, borderColor: C.red, color: C.red }}
+          whileTap={{ scale: 0.98 }}
+          style={{
+            display: "flex", alignItems: "center", gap: "8px", padding: "8px 16px",
+            background: "transparent", border: `1px solid ${C.border}`, borderRadius: "6px",
+            color: C.textLabel, fontSize: "13px", fontWeight: 500, cursor: "pointer",
+            transition: "all 0.2s ease"
+          }}
+        >
           Sign Out <LogOut size={16} />
         </motion.button>
       </div>
@@ -136,10 +160,13 @@ function TopNav() {
   );
 }
 
-function CopyLinkButton() {
+/* ─── COPY LINK BUTTON ───────────────────────────────────────── */
+function CopyLinkButton({ campaignId }: { campaignId: number }) {
   const [copied, setCopied] = useState(false);
 
   const handleCopy = () => {
+    const link = `https://jbrstaffingsolutions.com/apply/${campaignId}`;
+    navigator.clipboard.writeText(link).catch(() => {});
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
@@ -152,10 +179,10 @@ function CopyLinkButton() {
       style={{
         display: "flex", alignItems: "center", gap: "6px", padding: "6px 12px",
         background: copied ? C.successBg : "transparent",
-        border: copied ? `1px solid transparent` : `1px solid ${C.border}`,
+        border: `1px solid ${copied ? "transparent" : C.border}`,
         borderRadius: "6px", cursor: "pointer",
         color: copied ? C.successText : C.textLabel,
-        transition: "all 0.2s ease"
+        transition: "all 0.2s ease", whiteSpace: "nowrap"
       }}
     >
       {copied ? <Check size={14} /> : <Copy size={14} />}
@@ -164,7 +191,7 @@ function CopyLinkButton() {
   );
 }
 
-// Custom Input Field
+/* ─── FORM FIELD ─────────────────────────────────────────────── */
 interface FormFieldProps {
   label: string;
   placeholder: string;
@@ -177,85 +204,173 @@ function FormField({ label, placeholder, isDate = false, value, onChange }: Form
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "8px", flex: 1 }}>
       <label style={{ fontSize: "12px", fontWeight: 600, color: C.textLabel }}>{label}</label>
-      <div style={{ position: "relative" }}>
-        <input 
-          type={isDate ? "date" : "text"} 
-          placeholder={placeholder}
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          onFocus={() => setFocused(true)}
-          onBlur={() => setFocused(false)}
-          style={{
-            width: "100%", padding: "12px 16px",
-            background: C.inputBg,
-            border: `1px solid ${focused ? C.red : C.border}`,
-            borderRadius: "8px", color: C.textBody, fontSize: "14px",
-            outline: "none", transition: "all 0.2s ease",
-          }}
-        />
-        {isDate && <CalendarIcon size={16} color={C.textHint} style={{ position: "absolute", left: "16px", top: "50%", transform: "translateY(-50%)", pointerEvents: "none", opacity: 0 }} />} 
-      </div>
+      <input
+        type={isDate ? "date" : "text"}
+        placeholder={placeholder}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        onFocus={() => setFocused(true)}
+        onBlur={() => setFocused(false)}
+        style={{
+          width: "100%", padding: "12px 16px",
+          background: C.inputBg,
+          border: `1px solid ${focused ? C.red : C.border}`,
+          borderRadius: "8px", color: C.textBody, fontSize: "14px",
+          outline: "none", transition: "all 0.2s ease"
+        }}
+      />
     </div>
   );
 }
 
-/* ─── MAIN PAGE ────────────────────────────────────── */
-export default function CampaignsPage() {
-  const [isSidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const [activeTab, setActiveTab] = useState("campaigns");
-  
-  // Modal & Form State
-  const [isModalOpen, setModalOpen] = useState(false);
-  const [campaignName, setCampaignName] = useState("");
-  const [startDate, setStartDate] = useState("");
-  const [endDate, setEndDate] = useState("");
+/* ─── STATUS BADGE ───────────────────────────────────────────── */
+function StatusBadge({ status }: { status: string }) {
+  const s = status?.toLowerCase();
+  if (s === "active") {
+    return (
+      <div style={{ display: "inline-flex", alignItems: "center", gap: "6px", padding: "6px 12px", borderRadius: "20px", background: C.successBg, color: C.successText, fontSize: "11px", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.5px" }}>
+        <div style={{ width: "6px", height: "6px", borderRadius: "50%", background: C.successText }} /> Active
+      </div>
+    );
+  }
+  if (s === "inactive") {
+    return (
+      <div style={{ display: "inline-flex", alignItems: "center", padding: "6px 12px", borderRadius: "20px", background: C.inactiveBg, color: C.inactiveText, fontSize: "11px", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.5px" }}>
+        Inactive
+      </div>
+    );
+  }
+  if (s === "draft") {
+    return (
+      <div style={{ display: "inline-flex", alignItems: "center", padding: "6px 12px", borderRadius: "20px", background: C.pendingBg, border: `1px solid ${C.pendingBorder}`, color: C.pendingText, fontSize: "11px", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.5px" }}>
+        Draft
+      </div>
+    );
+  }
+  // fallback
+  return (
+    <div style={{ display: "inline-flex", alignItems: "center", padding: "6px 12px", borderRadius: "20px", background: C.alertBg, color: C.alertText, fontSize: "11px", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.5px" }}>
+      {status || "Unknown"}
+    </div>
+  );
+}
+
+/* ─── SPINNER ────────────────────────────────────────────────── */
+function Spinner({ size = 18, color = "currentColor" }: { size?: number; color?: string }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.5"
+      style={{ animation: "spin 0.7s linear infinite" }}>
+      <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" />
+    </svg>
+  );
+}
+
+/* ─── CONFIRM DELETE MODAL ───────────────────────────────────── */
+interface DeleteModalProps {
+  campaign: Campaign | null;
+  onConfirm: () => void;
+  onCancel: () => void;
+  isDeleting: boolean;
+}
+function DeleteModal({ campaign, onConfirm, onCancel, isDeleting }: DeleteModalProps) {
+  return (
+    <AnimatePresence>
+      {campaign && (
+        <div style={{ position: "fixed", inset: 0, zIndex: 200, display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <motion.div
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.45)" }}
+            onClick={() => { if (!isDeleting) onCancel(); }}
+          />
+          <motion.div
+            initial={{ opacity: 0, scale: 0.94, y: 16 }} animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.94, y: 16 }}
+            transition={{ type: "spring", bounce: 0.3, duration: 0.4 }}
+            style={{
+              position: "relative", width: "100%", maxWidth: "440px", margin: "24px",
+              background: C.surface, border: `1px solid ${C.border}`, borderRadius: "20px",
+              padding: "32px", textAlign: "center",
+              boxShadow: "0 20px 60px rgba(0,0,0,0.12)"
+            }}
+          >
+            <div style={{ width: "56px", height: "56px", borderRadius: "50%", background: C.alertBg, display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 20px" }}>
+              <AlertTriangle size={26} color={C.red} />
+            </div>
+            <h2 style={{ fontSize: "20px", fontWeight: 700, color: C.textHeading, marginBottom: "10px" }}>Delete Campaign?</h2>
+            <p style={{ fontSize: "14px", color: C.textMuted, marginBottom: "28px", lineHeight: 1.6 }}>
+              You are about to permanently delete <strong style={{ color: C.textBody }}>{campaign.name}</strong>. This action cannot be undone.
+            </p>
+            <div style={{ display: "flex", gap: "12px" }}>
+              <motion.button
+                onClick={onCancel} disabled={isDeleting}
+                whileHover={{ backgroundColor: C.inputBg }}
+                style={{ flex: 1, padding: "12px", background: "transparent", border: `1px solid ${C.border}`, borderRadius: "10px", fontSize: "14px", fontWeight: 600, color: C.textLabel, cursor: "pointer", transition: "all 0.2s" }}
+              >
+                Cancel
+              </motion.button>
+              <motion.button
+                onClick={onConfirm} disabled={isDeleting}
+                whileHover={isDeleting ? {} : { boxShadow: `0 6px 20px ${C.redGlow}` }}
+                whileTap={{ scale: 0.97 }}
+                style={{
+                  flex: 1, padding: "12px", background: `linear-gradient(135deg, ${C.redBright}, ${C.red})`,
+                  border: "none", borderRadius: "10px", fontSize: "14px", fontWeight: 600,
+                  color: C.white, cursor: isDeleting ? "default" : "pointer",
+                  display: "flex", alignItems: "center", justifyContent: "center", gap: "8px",
+                  opacity: isDeleting ? 0.75 : 1, transition: "all 0.2s"
+                }}
+              >
+                {isDeleting ? <Spinner size={16} color={C.white} /> : <Trash2 size={16} />}
+                {isDeleting ? "Deleting…" : "Delete"}
+              </motion.button>
+            </div>
+          </motion.div>
+        </div>
+      )}
+    </AnimatePresence>
+  );
+}
+
+/* ─── EDIT MODAL ─────────────────────────────────────────────── */
+interface EditModalProps {
+  campaign: Campaign | null;
+  onClose: () => void;
+  onSaved: (updated: Campaign) => void;
+}
+function EditModal({ campaign, onClose, onSaved }: EditModalProps) {
+  const [name, setName] = useState(campaign?.name ?? "");
+  const [startDate, setStartDate] = useState(toInputDate(campaign?.start_date ?? ""));
+  const [endDate, setEndDate] = useState(toInputDate(campaign?.end_date ?? ""));
+  const [status, setStatus] = useState(campaign?.status ?? "active");
   const [isLoading, setIsLoading] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
 
-  const tableGridTemplate = "1.5fr 1fr 1fr 1fr 1.5fr 0.8fr"; 
-
-  const handleCreateCampaign = async () => {
-    if (!campaignName || !startDate || !endDate) {
-      setErrorMsg("Please fill in all fields.");
-      return;
-    }
-
-    setIsLoading(true);
-    setErrorMsg("");
-
+  const handleSave = async () => {
+    if (!name || !startDate || !endDate) { setErrorMsg("Please fill in all fields."); return; }
+    setIsLoading(true); setErrorMsg("");
     try {
-      const token = localStorage.getItem("jbr_token");
-      
-      const response = await fetch("https://jbrstaffingsolutions.com/api/campaigns", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${token}` // Passing the bearer token
-        },
-        body: JSON.stringify({
-          name: campaignName,
-          startDate: startDate,
-          endDate: endDate
-        }),
+      const res = await fetch(`https://jbrstaffingsolutions.com/api/campaigns/${campaign!.id}`, {
+        method: "PUT",
+        headers: authHeaders(true),
+        body: JSON.stringify({ name, startDate, endDate, status }),
       });
-
-      if (response.ok) {
+      const data = await res.json();
+      if (res.ok) {
+        const normalized: Campaign = {
+          ...campaign!,
+          id: campaign!.id, // always use the original numeric id — API may return string
+          name: data.name ?? name,
+          start_date: data.start_date ?? data.startDate ?? startDate,
+          end_date: data.end_date ?? data.endDate ?? endDate,
+          status: data.status ?? status,
+        };
         setIsSuccess(true);
-        setTimeout(() => {
-          setCampaignName("");
-          setStartDate("");
-          setEndDate("");
-          setIsSuccess(false);
-          setModalOpen(false);
-          // Note: You would typically refetch your campaigns list here
-        }, 1500);
+        onSaved(normalized); // parent updates state + closes modal immediately
       } else {
-        const data = await response.json();
-        setErrorMsg(data.message || "Failed to create campaign.");
+        setErrorMsg(data.message || "Failed to update campaign.");
       }
-    } catch (error) {
-      console.error("Campaign Creation Error:", error);
+    } catch {
       setErrorMsg("A network error occurred. Please try again.");
     } finally {
       setIsLoading(false);
@@ -263,22 +378,398 @@ export default function CampaignsPage() {
   };
 
   return (
+    <AnimatePresence>
+      {campaign && (
+        <div style={{ position: "fixed", inset: 0, zIndex: 200, display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <motion.div
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.4)" }}
+            onClick={() => { if (!isLoading && !isSuccess) onClose(); }}
+          />
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.95, y: 20 }}
+            transition={{ duration: 0.4, type: "spring", bounce: 0.3 }}
+            style={{
+              position: "relative", width: "100%", maxWidth: "560px", margin: "24px",
+              background: C.surface, border: `1px solid ${C.border}`, borderRadius: "20px",
+              boxShadow: "0 20px 60px rgba(0,0,0,0.12)"
+            }}
+          >
+            <button
+              onClick={onClose} disabled={isLoading || isSuccess}
+              style={{ position: "absolute", right: "24px", top: "24px", background: "transparent", border: "none", color: C.textHint, cursor: "pointer" }}
+              onMouseEnter={(e) => e.currentTarget.style.color = C.textHeading}
+              onMouseLeave={(e) => e.currentTarget.style.color = C.textHint}
+            >
+              <X size={24} />
+            </button>
+
+            <div style={{ padding: "32px 32px 24px" }}>
+              <h2 style={{ fontSize: "24px", fontWeight: 600, color: C.textHeading, marginBottom: "8px" }}>Edit Campaign</h2>
+              <p style={{ fontSize: "14px", color: C.textMuted }}>Update the parameters for this campaign.</p>
+            </div>
+
+            <div style={{ padding: "0 32px 32px", display: "flex", flexDirection: "column", gap: "20px" }}>
+              <FormField label="Campaign Name" placeholder="Enter campaign name" value={name} onChange={setName} />
+
+              <div style={{ display: "flex", gap: "16px" }}>
+                <FormField label="Start Date" placeholder="" isDate value={startDate} onChange={setStartDate} />
+                <FormField label="End Date" placeholder="" isDate value={endDate} onChange={setEndDate} />
+              </div>
+
+              <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                <label style={{ fontSize: "12px", fontWeight: 600, color: C.textLabel }}>Status</label>
+                <select
+                  value={status}
+                  onChange={(e) => setStatus(e.target.value)}
+                  style={{
+                    padding: "12px 16px", background: C.inputBg, border: `1px solid ${C.border}`,
+                    borderRadius: "8px", color: C.textBody, fontSize: "14px", outline: "none", cursor: "pointer"
+                  }}
+                >
+                  <option value="active">Active</option>
+                  <option value="inactive">Inactive</option>
+                  <option value="draft">Draft</option>
+                </select>
+              </div>
+
+              {errorMsg && <div style={{ color: C.red, fontSize: "13px", fontWeight: 500 }}>{errorMsg}</div>}
+
+              <motion.button
+                disabled={isLoading || isSuccess}
+                onClick={handleSave}
+                whileHover={isLoading || isSuccess ? {} : { y: -2, boxShadow: `0 8px 24px ${C.redGlow}` }}
+                whileTap={isLoading || isSuccess ? {} : { scale: 0.98 }}
+                style={{
+                  width: "100%", padding: "14px", marginTop: "8px",
+                  background: isSuccess ? "#059669" : `linear-gradient(135deg, ${C.redBright}, ${C.red})`,
+                  border: "none", borderRadius: "10px",
+                  display: "flex", justifyContent: "center", alignItems: "center", gap: "8px",
+                  color: C.white, fontSize: "15px", fontWeight: 600, letterSpacing: "0.5px",
+                  cursor: isLoading || isSuccess ? "default" : "pointer",
+                  transition: "background 0.3s ease, box-shadow 0.3s ease",
+                  opacity: isLoading ? 0.8 : 1
+                }}
+              >
+                {isLoading ? <Spinner size={18} color={C.white} /> :
+                  isSuccess ? <><Check size={18} strokeWidth={2.5} /><span>Saved!</span></> :
+                    <span>Save Changes</span>}
+              </motion.button>
+            </div>
+          </motion.div>
+        </div>
+      )}
+    </AnimatePresence>
+  );
+}
+
+/* ─── CREATE CAMPAIGN MODAL ──────────────────────────────────── */
+interface CreateModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onCreated: (campaign: Campaign) => void;
+}
+function CreateModal({ isOpen, onClose, onCreated }: CreateModalProps) {
+  const [campaignName, setCampaignName] = useState("");
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const [isSuccess, setIsSuccess] = useState(false);
+  const [errorMsg, setErrorMsg] = useState("");
+
+  const reset = () => { setCampaignName(""); setStartDate(""); setEndDate(""); setIsSuccess(false); setErrorMsg(""); };
+
+  const handleCreate = async () => {
+    if (!campaignName || !startDate || !endDate) { setErrorMsg("Please fill in all fields."); return; }
+    setIsLoading(true); setErrorMsg("");
+    try {
+      const res = await fetch("https://jbrstaffingsolutions.com/api/campaigns", {
+        method: "POST",
+        headers: authHeaders(true),
+        body: JSON.stringify({ name: campaignName, startDate, endDate }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setIsSuccess(true);
+        const normalized: Campaign = {
+          id: data.id,
+          name: data.name ?? campaignName,
+          start_date: data.start_date ?? data.startDate ?? startDate,
+          end_date: data.end_date ?? data.endDate ?? endDate,
+          status: data.status ?? "draft",
+          created_at: data.created_at,
+        };
+        setTimeout(() => { onCreated(normalized); reset(); onClose(); }, 1400);
+      } else {
+        setErrorMsg(data.message || "Failed to create campaign.");
+      }
+    } catch {
+      setErrorMsg("A network error occurred. Please try again.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  return (
+    <AnimatePresence>
+      {isOpen && (
+        <div style={{ position: "fixed", inset: 0, zIndex: 100, display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <motion.div
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.3 }}
+            style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.4)" }}
+            onClick={() => { if (!isLoading && !isSuccess) { reset(); onClose(); } }}
+          />
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.95, y: 20 }}
+            transition={{ duration: 0.4, type: "spring", bounce: 0.3 }}
+            style={{
+              position: "relative", width: "100%", maxWidth: "560px", margin: "24px",
+              background: C.surface, border: `1px solid ${C.border}`, borderRadius: "20px",
+              boxShadow: "0 20px 60px rgba(0,0,0,0.12)"
+            }}
+          >
+            <button
+              onClick={() => { reset(); onClose(); }} disabled={isLoading || isSuccess}
+              style={{ position: "absolute", right: "24px", top: "24px", background: "transparent", border: "none", color: C.textHint, cursor: "pointer" }}
+              onMouseEnter={(e) => e.currentTarget.style.color = C.textHeading}
+              onMouseLeave={(e) => e.currentTarget.style.color = C.textHint}
+            >
+              <X size={24} />
+            </button>
+
+            <div style={{ padding: "32px 32px 24px" }}>
+              <h2 style={{ fontSize: "24px", fontWeight: 600, color: C.textHeading, marginBottom: "8px" }}>Create New Campaign</h2>
+              <p style={{ fontSize: "14px", color: C.textMuted }}>Define the parameters for your new recruitment campaign.</p>
+            </div>
+
+            <div style={{ padding: "0 32px 32px", display: "flex", flexDirection: "column", gap: "24px" }}>
+              <FormField label="Campaign Name" placeholder="Enter campaign name" value={campaignName} onChange={setCampaignName} />
+
+              <div style={{ display: "flex", gap: "16px" }}>
+                <FormField label="Start Date" placeholder="" isDate value={startDate} onChange={setStartDate} />
+                <FormField label="End Date" placeholder="" isDate value={endDate} onChange={setEndDate} />
+              </div>
+
+              {errorMsg && <div style={{ color: C.red, fontSize: "13px", fontWeight: 500, marginTop: "-8px" }}>{errorMsg}</div>}
+
+              <motion.button
+                disabled={isLoading || isSuccess}
+                onClick={handleCreate}
+                whileHover={isLoading || isSuccess ? {} : { y: -2, boxShadow: `0 8px 24px ${C.redGlow}` }}
+                whileTap={isLoading || isSuccess ? {} : { scale: 0.98 }}
+                style={{
+                  width: "100%", padding: "14px", marginTop: "8px",
+                  background: isSuccess ? "#059669" : `linear-gradient(135deg, ${C.redBright}, ${C.red})`,
+                  border: "none", borderRadius: "10px",
+                  display: "flex", justifyContent: "center", alignItems: "center", gap: "8px",
+                  color: C.white, fontSize: "15px", fontWeight: 600, letterSpacing: "0.5px",
+                  cursor: isLoading || isSuccess ? "default" : "pointer",
+                  transition: "background 0.3s ease, box-shadow 0.3s ease",
+                  opacity: isLoading ? 0.8 : 1
+                }}
+              >
+                {isLoading ? <Spinner size={18} color={C.white} /> :
+                  isSuccess ? <><Check size={18} strokeWidth={2.5} /><span>Campaign Created!</span></> :
+                    <span>Create Campaign</span>}
+              </motion.button>
+            </div>
+          </motion.div>
+        </div>
+      )}
+    </AnimatePresence>
+  );
+}
+
+/* ─── TOAST NOTIFICATION ─────────────────────────────────────── */
+interface ToastProps {
+  message: string;
+  type: "success" | "error" | "info";
+  onDone: () => void;
+}
+function Toast({ message, type, onDone }: ToastProps) {
+  useEffect(() => {
+    const t = setTimeout(onDone, 3000);
+    return () => clearTimeout(t);
+  }, [onDone]);
+
+  const bg = type === "success" ? "#059669" : type === "error" ? C.red : C.pendingText;
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20, scale: 0.95 }} animate={{ opacity: 1, y: 0, scale: 1 }}
+      exit={{ opacity: 0, y: 10, scale: 0.95 }}
+      style={{
+        position: "fixed", bottom: "32px", right: "32px", zIndex: 300,
+        background: bg, color: C.white, padding: "14px 20px", borderRadius: "12px",
+        fontSize: "14px", fontWeight: 600, boxShadow: "0 8px 30px rgba(0,0,0,0.15)",
+        display: "flex", alignItems: "center", gap: "10px", maxWidth: "360px"
+      }}
+    >
+      {type === "success" ? <Check size={18} /> : type === "error" ? <X size={18} /> : <RefreshCw size={18} />}
+      {message}
+    </motion.div>
+  );
+}
+
+/* ─── EMPTY STATE ────────────────────────────────────────────── */
+function EmptyState({ onCreateClick }: { onCreateClick: () => void }) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}
+      style={{ textAlign: "center", padding: "80px 40px", display: "flex", flexDirection: "column", alignItems: "center", gap: "16px" }}
+    >
+      <div style={{ width: "64px", height: "64px", borderRadius: "50%", background: C.inputBg, display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <CalendarIcon size={28} color={C.textHint} />
+      </div>
+      <h3 style={{ fontSize: "18px", fontWeight: 600, color: C.textHeading }}>No Campaigns Yet</h3>
+      <p style={{ fontSize: "14px", color: C.textMuted, maxWidth: "320px", lineHeight: 1.6 }}>
+        You haven't created any campaigns. Click the button below to get started.
+      </p>
+      <motion.button
+        onClick={onCreateClick}
+        whileHover={{ y: -2, boxShadow: `0 8px 24px ${C.redGlow}` }} whileTap={{ scale: 0.98 }}
+        style={{
+          display: "flex", alignItems: "center", gap: "8px", padding: "12px 24px", marginTop: "8px",
+          background: `linear-gradient(135deg, ${C.redBright}, ${C.red})`,
+          border: "none", borderRadius: "8px", color: C.white, fontSize: "14px",
+          fontWeight: 600, cursor: "pointer", boxShadow: `0 4px 16px ${C.redGlow}`
+        }}
+      >
+        <Plus size={18} /> Create First Campaign
+      </motion.button>
+    </motion.div>
+  );
+}
+
+/* ─── MAIN PAGE ──────────────────────────────────────────────── */
+export default function CampaignsPage() {
+  const [isSidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [activeTab, setActiveTab] = useState("campaigns");
+
+  const [campaigns, setCampaigns] = useState<Campaign[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState("");
+  const [search, setSearch] = useState("");
+
+  const [isCreateOpen, setCreateOpen] = useState(false);
+  const [editTarget, setEditTarget] = useState<Campaign | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<Campaign | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  // Per-row action loading (activate / deactivate)
+  const [actionLoading, setActionLoading] = useState<Record<number, string>>({});
+
+  const [toast, setToast] = useState<{ message: string; type: "success" | "error" | "info" } | null>(null);
+
+  const showToast = (message: string, type: "success" | "error" | "info" = "success") => {
+    setToast({ message, type });
+  };
+
+  /* ── Fetch campaigns ── */
+  const fetchCampaigns = useCallback(async () => {
+    setIsLoading(true); setLoadError("");
+    try {
+      const res = await fetch("https://jbrstaffingsolutions.com/api/campaigns", {
+        headers: authHeaders(),
+      });
+      if (!res.ok) throw new Error(`Server returned ${res.status}`);
+      const data = await res.json();
+      setCampaigns(Array.isArray(data) ? data : []);
+    } catch (err: unknown) {
+      setLoadError(err instanceof Error ? err.message : "Failed to load campaigns.");
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { fetchCampaigns(); }, [fetchCampaigns]);
+
+  /* ── Delete ── */
+  const handleDeleteConfirm = async () => {
+    if (!deleteTarget) return;
+    setIsDeleting(true);
+    try {
+      const res = await fetch(`https://jbrstaffingsolutions.com/api/campaigns/${deleteTarget.id}`, {
+        method: "DELETE",
+        headers: authHeaders(true),
+      });
+      if (res.ok) {
+        setCampaigns((prev) => prev.filter((c) => c.id !== deleteTarget.id));
+        showToast("Campaign deleted successfully.");
+      } else {
+        const data = await res.json().catch(() => ({}));
+        showToast(data.message || "Failed to delete campaign.", "error");
+      }
+    } catch {
+      showToast("A network error occurred.", "error");
+    } finally {
+      setIsDeleting(false);
+      setDeleteTarget(null);
+    }
+  };
+
+  /* ── Toggle activate / deactivate ── */
+  const handleToggleStatus = async (camp: Campaign) => {
+    const isActive = camp.status?.toLowerCase() === "active";
+    const action = isActive ? "deactivate" : "activate";
+    setActionLoading((prev) => ({ ...prev, [camp.id]: action }));
+    try {
+      const res = await fetch(`https://jbrstaffingsolutions.com/api/campaigns/${camp.id}/${action}`, {
+        method: "PATCH",
+        headers: authHeaders(),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok) {
+        setCampaigns((prev) =>
+          prev.map((c) => c.id === camp.id ? { ...c, status: data.status ?? (isActive ? "inactive" : "active") } : c)
+        );
+        showToast(`Campaign ${action}d successfully.`);
+      } else {
+        showToast(data.error || data.message || `Failed to ${action} campaign.`, "error");
+      }
+    } catch {
+      showToast("A network error occurred.", "error");
+    } finally {
+      setActionLoading((prev) => { const n = { ...prev }; delete n[camp.id]; return n; });
+    }
+  };
+
+  const handleCreated = (newCampaign: Campaign) => {
+    setCampaigns((prev) => [newCampaign, ...prev]);
+    showToast("Campaign created successfully!");
+  };
+
+  const handleUpdated = (updated: Campaign) => {
+    setCampaigns((prev) => prev.map((c) => Number(c.id) === Number(updated.id) ? updated : c));
+    setEditTarget(null);
+    showToast("Campaign updated successfully.");
+  };
+
+  const filtered = campaigns.filter((c) =>
+    c.name?.toLowerCase().includes(search.toLowerCase())
+  );
+
+  const tableGridTemplate = "1.8fr 1fr 1fr 1fr 1fr 0.9fr";
+
+  return (
     <>
       <style>{GLOBAL_CSS}</style>
 
       <div style={{ display: "flex", height: "100vh", overflow: "hidden" }}>
-        
-        <Sidebar 
-          isCollapsed={isSidebarCollapsed} setCollapsed={setSidebarCollapsed} 
-          activeTab={activeTab} setActiveTab={setActiveTab} 
+        <Sidebar
+          isCollapsed={isSidebarCollapsed} setCollapsed={setSidebarCollapsed}
+          activeTab={activeTab} setActiveTab={setActiveTab}
         />
 
         <div style={{ flex: 1, display: "flex", flexDirection: "column", overflowY: "auto", position: "relative" }}>
           <TopNav />
 
           <main style={{ padding: "40px", maxWidth: "1600px", margin: "0 auto", width: "100%", display: "flex", flexDirection: "column", gap: "32px" }}>
-            
-            <motion.div 
+
+            {/* Page Header */}
+            <motion.div
               initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }}
               style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", flexWrap: "wrap", gap: "16px" }}
             >
@@ -288,39 +779,65 @@ export default function CampaignsPage() {
                 </h1>
                 <p style={{ fontSize: "15px", color: C.textMuted }}>
                   Create and manage recruitment campaigns
+                  {!isLoading && !loadError && (
+                    <span style={{ marginLeft: "8px", fontSize: "13px", color: C.textHint }}>
+                      ({campaigns.length} total)
+                    </span>
+                  )}
                 </p>
               </div>
-              
-              <motion.button 
-                onClick={() => setModalOpen(true)}
-                whileHover={{ y: -2, boxShadow: `0 8px 24px ${C.redGlow}` }} whileTap={{ scale: 0.98 }}
-                style={{
-                  display: "flex", alignItems: "center", gap: "8px", padding: "12px 24px",
-                  background: `linear-gradient(135deg, ${C.redBright}, ${C.red})`,
-                  border: "none", borderRadius: "8px",
-                  color: C.white, fontSize: "14px", fontWeight: 600, letterSpacing: "0.5px",
-                  cursor: "pointer", position: "relative", overflow: "hidden",
-                  boxShadow: `0 4px 16px ${C.redGlow}`
-                }}
-              >
-                <Plus size={18} style={{ position: "relative", zIndex: 1 }} />
-                <span style={{ position: "relative", zIndex: 1 }}>Create Campaign</span>
-              </motion.button>
+
+              <div style={{ display: "flex", gap: "12px", alignItems: "center" }}>
+                <motion.button
+                  onClick={fetchCampaigns}
+                  whileHover={{ backgroundColor: C.inputBg }}
+                  whileTap={{ scale: 0.95 }}
+                  style={{
+                    display: "flex", alignItems: "center", gap: "6px", padding: "10px 16px",
+                    background: "transparent", border: `1px solid ${C.border}`, borderRadius: "8px",
+                    color: C.textLabel, fontSize: "13px", fontWeight: 500, cursor: "pointer",
+                    transition: "all 0.2s"
+                  }}
+                >
+                  <RefreshCw size={15} style={isLoading ? { animation: "spin 0.7s linear infinite" } : {}} />
+                  Refresh
+                </motion.button>
+
+                <motion.button
+                  onClick={() => setCreateOpen(true)}
+                  whileHover={{ y: -2, boxShadow: `0 8px 24px ${C.redGlow}` }} whileTap={{ scale: 0.98 }}
+                  style={{
+                    display: "flex", alignItems: "center", gap: "8px", padding: "12px 24px",
+                    background: `linear-gradient(135deg, ${C.redBright}, ${C.red})`,
+                    border: "none", borderRadius: "8px", color: C.white, fontSize: "14px",
+                    fontWeight: 600, letterSpacing: "0.5px", cursor: "pointer",
+                    boxShadow: `0 4px 16px ${C.redGlow}`
+                  }}
+                >
+                  <Plus size={18} />
+                  <span>Create Campaign</span>
+                </motion.button>
+              </div>
             </motion.div>
 
-            <motion.div variants={containerVars} initial="hidden" animate="show" className="clean-card" style={{ display: "flex", flexDirection: "column", overflow: "hidden" }}>
-              
+            {/* Table Card */}
+            <motion.div
+              variants={containerVars} initial="hidden" animate="show"
+              className="clean-card"
+              style={{ display: "flex", flexDirection: "column", overflow: "hidden" }}
+            >
+              {/* Card Header */}
               <div style={{ padding: "24px 32px", borderBottom: `1px solid ${C.border}`, display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "16px" }}>
                 <h3 style={{ fontSize: "20px", fontWeight: 600, color: C.textHeading }}>Campaign List</h3>
-                
                 <div style={{ position: "relative" }}>
                   <Search size={16} color={C.textHint} style={{ position: "absolute", left: "14px", top: "50%", transform: "translateY(-50%)" }} />
-                  <input 
-                    type="text" placeholder="Search campaigns..." 
+                  <input
+                    type="text" placeholder="Search campaigns..."
+                    value={search} onChange={(e) => setSearch(e.target.value)}
                     style={{
                       background: C.inputBg, border: `1px solid ${C.border}`, borderRadius: "8px",
-                      padding: "10px 16px 10px 40px", color: C.textBody, fontSize: "14px", width: "260px", outline: "none",
-                      transition: "border-color 0.2s"
+                      padding: "10px 16px 10px 40px", color: C.textBody, fontSize: "14px",
+                      width: "260px", outline: "none", transition: "border-color 0.2s"
                     }}
                     onFocus={(e) => e.target.style.borderColor = C.red}
                     onBlur={(e) => e.target.style.borderColor = C.border}
@@ -328,188 +845,156 @@ export default function CampaignsPage() {
                 </div>
               </div>
 
-              <div className="table-container">
-                <div className="table-min-width">
-                  
-                  <div style={{ display: "grid", gridTemplateColumns: tableGridTemplate, padding: "16px 32px", borderBottom: `1px solid ${C.border}`, background: C.inputBg }}>
-                    {["Name", "Start Date", "End Date", "Status", "Link", "Actions"].map((head, i) => (
-                      <span key={i} style={{ fontSize: "11px", textTransform: "uppercase", letterSpacing: "1px", color: C.textHint, fontWeight: 600 }}>
-                        {head}
-                      </span>
-                    ))}
-                  </div>
-
-                  <div style={{ display: "flex", flexDirection: "column" }}>
-                    {CAMPAIGNS_DATA.map((camp, idx) => (
-                      <motion.div 
-                        key={camp.id} variants={itemVars}
-                        whileHover={{ backgroundColor: C.inputBg }}
-                        style={{ 
-                          display: "grid", gridTemplateColumns: tableGridTemplate, alignItems: "center",
-                          padding: "20px 32px", borderBottom: idx !== CAMPAIGNS_DATA.length - 1 ? `1px solid ${C.border}` : "none",
-                          transition: "background-color 0.2s ease"
-                        }}
-                      >
-                        <div style={{ fontSize: "15px", fontWeight: 600, color: C.textHeading }}>{camp.name}</div>
-                        <div style={{ fontSize: "14px", color: C.textMuted }}>{camp.start}</div>
-                        <div style={{ fontSize: "14px", color: C.textMuted }}>{camp.end}</div>
-                        
-                        <div>
-                          {camp.status === "Active" ? (
-                            <div style={{ display: "inline-flex", alignItems: "center", gap: "6px", padding: "6px 12px", borderRadius: "20px", background: C.successBg, color: C.successText, fontSize: "11px", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.5px" }}>
-                              <div style={{ width: "6px", height: "6px", borderRadius: "50%", background: C.successText }} /> Active
-                            </div>
-                          ) : camp.status === "Ended" ? (
-                            <div style={{ display: "inline-flex", alignItems: "center", padding: "6px 12px", borderRadius: "20px", background: C.alertBg, color: C.alertText, fontSize: "11px", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.5px" }}>
-                              Ended
-                            </div>
-                          ) : (
-                            <div style={{ display: "inline-flex", alignItems: "center", padding: "6px 12px", borderRadius: "20px", background: C.pendingBg, border: `1px solid ${C.pendingBorder}`, color: C.pendingText, fontSize: "11px", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.5px" }}>
-                              Draft
-                            </div>
-                          )}
-                        </div>
-
-                        <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                          {camp.status !== "Draft" && <CopyLinkButton />}
-                          {camp.linkStatus === "Working" && (
-                            <span style={{ padding: "4px 8px", borderRadius: "4px", background: C.successBg, color: C.successText, fontSize: "11px", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.5px" }}>Working</span>
-                          )}
-                          {camp.linkStatus === "Expired" && (
-                            <span style={{ padding: "4px 8px", borderRadius: "4px", background: C.alertBg, color: C.alertText, fontSize: "11px", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.5px" }}>Expired</span>
-                          )}
-                          {camp.linkStatus === "Pending" && (
-                            <span style={{ padding: "4px 8px", borderRadius: "4px", background: C.pendingBg, color: C.pendingText, fontSize: "11px", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.5px" }}>Pending</span>
-                          )}
-                        </div>
-
-                        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                          <motion.button whileHover={{ scale: 1.1, color: C.red }} whileTap={{ scale: 0.9 }} style={{ background: "transparent", border: "none", color: C.textHint, cursor: "pointer", padding: "6px", transition: "color 0.2s" }}>
-                            <Edit2 size={18} />
-                          </motion.button>
-                          <motion.button whileHover={{ scale: 1.1, color: C.redBright }} whileTap={{ scale: 0.9 }} style={{ background: "transparent", border: "none", color: C.textHint, cursor: "pointer", padding: "6px", transition: "color 0.2s" }}>
-                            <EyeOff size={18} />
-                          </motion.button>
-                        </div>
-
-                      </motion.div>
-                    ))}
-                  </div>
-
+              {/* Loading State */}
+              {isLoading && (
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "12px", padding: "60px 40px", color: C.textMuted, fontSize: "15px" }}>
+                  <Spinner size={22} color={C.red} />
+                  Loading campaigns…
                 </div>
-              </div>
+              )}
+
+              {/* Error State */}
+              {!isLoading && loadError && (
+                <div style={{ padding: "40px", textAlign: "center" }}>
+                  <p style={{ color: C.red, fontSize: "14px", marginBottom: "16px" }}>{loadError}</p>
+                  <motion.button
+                    onClick={fetchCampaigns}
+                    whileHover={{ backgroundColor: C.redActiveBg }}
+                    style={{ padding: "10px 20px", border: `1px solid ${C.red}`, borderRadius: "8px", background: "transparent", color: C.red, fontSize: "13px", fontWeight: 600, cursor: "pointer" }}
+                  >
+                    Retry
+                  </motion.button>
+                </div>
+              )}
+
+              {/* Empty State */}
+              {!isLoading && !loadError && filtered.length === 0 && (
+                search
+                  ? <div style={{ padding: "60px", textAlign: "center", color: C.textMuted }}>No campaigns match "{search}".</div>
+                  : <EmptyState onCreateClick={() => setCreateOpen(true)} />
+              )}
+
+              {/* Table */}
+              {!isLoading && !loadError && filtered.length > 0 && (
+                <div className="table-container">
+                  <div className="table-min-width">
+
+                    {/* Header Row */}
+                    <div style={{ display: "grid", gridTemplateColumns: tableGridTemplate, padding: "16px 32px", borderBottom: `1px solid ${C.border}`, background: C.inputBg }}>
+                      {["Name", "Start Date", "End Date", "Status", "Link", "Actions"].map((head, i) => (
+                        <span key={i} style={{ fontSize: "11px", textTransform: "uppercase", letterSpacing: "1px", color: C.textHint, fontWeight: 600 }}>
+                          {head}
+                        </span>
+                      ))}
+                    </div>
+
+                    {/* Data Rows */}
+                    <div style={{ display: "flex", flexDirection: "column" }}>
+                      {filtered.map((camp, idx) => {
+                        const rowActionLoading = actionLoading[camp.id];
+                        const isActive = camp.status?.toLowerCase() === "active";
+
+                        return (
+                          <motion.div
+                            key={camp.id} variants={itemVars}
+                            whileHover={{ backgroundColor: C.inputBg }}
+                            style={{
+                              display: "grid", gridTemplateColumns: tableGridTemplate,
+                              alignItems: "center", padding: "20px 32px",
+                              borderBottom: idx !== filtered.length - 1 ? `1px solid ${C.border}` : "none",
+                              transition: "background-color 0.2s ease"
+                            }}
+                          >
+                            {/* Name */}
+                            <div>
+                              <div style={{ fontSize: "15px", fontWeight: 600, color: C.textHeading }}>{camp.name}</div>
+                              <div style={{ fontSize: "11px", color: C.textHint, marginTop: "2px" }}>ID: {camp.id}</div>
+                            </div>
+
+                            {/* Start Date */}
+                            <div style={{ fontSize: "14px", color: C.textMuted }}>{formatDate(camp.start_date)}</div>
+
+                            {/* End Date */}
+                            <div style={{ fontSize: "14px", color: C.textMuted }}>{formatDate(camp.end_date)}</div>
+
+                            {/* Status */}
+                            <div><StatusBadge status={camp.status} /></div>
+
+                            {/* Link */}
+                            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                              {isActive && <CopyLinkButton campaignId={camp.id} />}
+                              {!isActive && (
+                                <span style={{ fontSize: "12px", color: C.textHint, fontStyle: "italic" }}>—</span>
+                              )}
+                            </div>
+
+                            {/* Actions */}
+                            <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
+                              {/* Edit */}
+                              <motion.button
+                                onClick={() => setEditTarget(camp)}
+                                whileHover={{ scale: 1.1, color: C.red }}
+                                whileTap={{ scale: 0.9 }}
+                                title="Edit campaign"
+                                style={{ background: "transparent", border: "none", color: C.textHint, cursor: "pointer", padding: "7px", transition: "color 0.2s", borderRadius: "6px" }}
+                              >
+                                <Edit2 size={17} />
+                              </motion.button>
+
+                              {/* Activate / Deactivate */}
+                              <motion.button
+                                onClick={() => handleToggleStatus(camp)}
+                                disabled={!!rowActionLoading}
+                                whileHover={rowActionLoading ? {} : { scale: 1.1, color: isActive ? C.redBright : C.successText }}
+                                whileTap={{ scale: 0.9 }}
+                                title={isActive ? "Deactivate" : "Activate"}
+                                style={{
+                                  background: "transparent", border: "none", color: C.textHint,
+                                  cursor: rowActionLoading ? "default" : "pointer", padding: "7px",
+                                  transition: "color 0.2s", borderRadius: "6px",
+                                  opacity: rowActionLoading ? 0.5 : 1
+                                }}
+                              >
+                                {rowActionLoading
+                                  ? <Spinner size={17} />
+                                  : isActive ? <EyeOff size={17} /> : <Eye size={17} />
+                                }
+                              </motion.button>
+
+                              {/* Delete */}
+                              <motion.button
+                                onClick={() => setDeleteTarget(camp)}
+                                whileHover={{ scale: 1.1, color: C.redBright }}
+                                whileTap={{ scale: 0.9 }}
+                                title="Delete campaign"
+                                style={{ background: "transparent", border: "none", color: C.textHint, cursor: "pointer", padding: "7px", transition: "color 0.2s", borderRadius: "6px" }}
+                              >
+                                <Trash2 size={17} />
+                              </motion.button>
+                            </div>
+                          </motion.div>
+                        );
+                      })}
+                    </div>
+
+                  </div>
+                </div>
+              )}
             </motion.div>
 
           </main>
         </div>
       </div>
 
-      {/* CREATE CAMPAIGN DIALOG MODAL */}
+      {/* ── Modals ── */}
+      <CreateModal isOpen={isCreateOpen} onClose={() => setCreateOpen(false)} onCreated={handleCreated} />
+      {editTarget && <EditModal campaign={editTarget} onClose={() => setEditTarget(null)} onSaved={handleUpdated} />}
+      <DeleteModal campaign={deleteTarget} onConfirm={handleDeleteConfirm} onCancel={() => setDeleteTarget(null)} isDeleting={isDeleting} />
+
+      {/* ── Toast ── */}
       <AnimatePresence>
-        {isModalOpen && (
-          <div style={{ position: "fixed", inset: 0, zIndex: 100, display: "flex", alignItems: "center", justifyContent: "center" }}>
-            
-            {/* Backdrop */}
-            <motion.div 
-              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.3 }}
-              style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.4)" }}
-              onClick={() => { if (!isLoading && !isSuccess) setModalOpen(false); }}
-            />
-
-            {/* Modal Content */}
-            <motion.div 
-              initial={{ opacity: 0, scale: 0.95, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95, y: 20 }} transition={{ duration: 0.4, type: "spring", bounce: 0.3 }}
-              style={{ 
-                position: "relative", width: "100%", maxWidth: "560px", margin: "24px",
-                background: C.surface,
-                border: `1px solid ${C.border}`, borderRadius: "20px",
-                boxShadow: "0 1px 3px rgba(0,0,0,0.06), 0 4px 16px rgba(0,0,0,0.06)"
-              }}
-            >
-              {/* Close Button */}
-              <button 
-                onClick={() => setModalOpen(false)}
-                disabled={isLoading || isSuccess}
-                style={{ position: "absolute", right: "24px", top: "24px", background: "transparent", border: "none", color: C.textHint, cursor: isLoading || isSuccess ? "not-allowed" : "pointer", transition: "color 0.2s" }}
-                onMouseEnter={(e) => e.currentTarget.style.color = C.textHeading}
-                onMouseLeave={(e) => e.currentTarget.style.color = C.textHint}
-              >
-                <X size={24} />
-              </button>
-
-              <div style={{ padding: "32px 32px 24px" }}>
-                <h2 style={{ fontSize: "24px", fontWeight: 600, color: C.textHeading, marginBottom: "8px", fontFamily: "'DM Sans', sans-serif" }}>Create New Campaign</h2>
-                <p style={{ fontSize: "14px", color: C.textMuted }}>Define the parameters for your new recruitment campaign.</p>
-              </div>
-
-              <div style={{ padding: "0 32px 32px", display: "flex", flexDirection: "column", gap: "24px" }}>
-                
-                <FormField 
-                  label="Campaign Name" 
-                  placeholder="Enter campaign name" 
-                  value={campaignName}
-                  onChange={setCampaignName}
-                />
-                
-                <div style={{ display: "flex", gap: "16px" }}>
-                  <FormField 
-                    label="Start Date" 
-                    placeholder="Pick start date" 
-                    isDate 
-                    value={startDate}
-                    onChange={setStartDate}
-                  />
-                  <FormField 
-                    label="End Date" 
-                    placeholder="Pick end date" 
-                    isDate 
-                    value={endDate}
-                    onChange={setEndDate}
-                  />
-                </div>
-
-                {errorMsg && (
-                  <div style={{ color: C.red, fontSize: "13px", fontWeight: 500, marginTop: "-8px" }}>
-                    {errorMsg}
-                  </div>
-                )}
-
-                <motion.button 
-                  disabled={isLoading || isSuccess}
-                  onClick={handleCreateCampaign}
-                  whileHover={isLoading || isSuccess ? {} : { y: -2, boxShadow: `0 8px 24px ${C.redGlow}` }} 
-                  whileTap={isLoading || isSuccess ? {} : { scale: 0.98 }}
-                  style={{
-                    width: "100%", padding: "14px", marginTop: "8px",
-                    background: isSuccess ? "#059669" : `linear-gradient(135deg, ${C.redBright}, ${C.red})`,
-                    border: "none", borderRadius: "10px", display: "flex", justifyContent: "center", alignItems: "center", gap: "8px",
-                    color: C.white, fontSize: "15px", fontWeight: 600, letterSpacing: "0.5px",
-                    cursor: isLoading || isSuccess ? "default" : "pointer", position: "relative", overflow: "hidden",
-                    boxShadow: isSuccess ? "0 4px 16px rgba(5,150,105,0.25)" : `0 4px 16px ${C.redGlow}`,
-                    opacity: isLoading ? 0.8 : 1,
-                    transition: "background 0.3s ease, box-shadow 0.3s ease"
-                  }}
-                >
-                  {isLoading ? (
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" style={{ animation: "spin 0.7s linear infinite" }}>
-                      <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>
-                    </svg>
-                  ) : isSuccess ? (
-                    <>
-                      <Check size={18} strokeWidth={2.5} />
-                      <span style={{ position: "relative", zIndex: 1 }}>Campaign Created!</span>
-                    </>
-                  ) : (
-                    <span style={{ position: "relative", zIndex: 1 }}>Create Campaign</span>
-                  )}
-                </motion.button>
-              </div>
-            </motion.div>
-
-          </div>
-        )}
+        {toast && <Toast message={toast.message} type={toast.type} onDone={() => setToast(null)} />}
       </AnimatePresence>
-
     </>
   );
 }
