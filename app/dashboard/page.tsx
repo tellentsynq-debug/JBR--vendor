@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useRouter, usePathname } from "next/navigation"; 
 import { 
@@ -127,6 +127,26 @@ const itemVars = {
 /* ─── COMPONENTS ─────────────────────────────────────────────── */
 
 function TopNav({ activeTabLabel }: { activeTabLabel: string }) {
+  const router = useRouter();
+  const [user, setUser] = useState<{ firstName?: string, email?: string } | null>(null);
+
+  useEffect(() => {
+    const storedUser = localStorage.getItem("jbr_user");
+    if (storedUser) {
+      try {
+        setUser(JSON.parse(storedUser));
+      } catch (e) {
+        console.error("Failed to parse user data", e);
+      }
+    }
+  }, []);
+
+  const handleSignOut = () => {
+    localStorage.removeItem("jbr_token");
+    localStorage.removeItem("jbr_user");
+    router.push("/"); // Ensure this points to your login/auth route
+  };
+
   return (
     <motion.header 
       initial={{ y: -20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ duration: 0.5, ease: easeOutCirc }}
@@ -143,9 +163,12 @@ function TopNav({ activeTabLabel }: { activeTabLabel: string }) {
       
       <div style={{ display: "flex", alignItems: "center", gap: "20px" }}>
         <span style={{ fontSize: "13px", color: C.textMuted }}>
-          Welcome, <span style={{ color: C.textHeading, fontWeight: 600 }}>support@jbrstaffingsolutions.ca</span>
+          Welcome, <span style={{ color: C.textHeading, fontWeight: 600 }}>
+            {user ? (user.firstName ? `${user.firstName} (${user.email})` : user.email) : "Loading..."}
+          </span>
         </span>
         <motion.button 
+          onClick={handleSignOut}
           whileHover={{ backgroundColor: C.redActiveBg, borderColor: C.red, color: C.red }} whileTap={{ scale: 0.97 }}
           style={{
             display: "flex", alignItems: "center", gap: "7px", padding: "8px 16px",

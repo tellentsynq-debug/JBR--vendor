@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useCallback } from "react";
+import { useRouter } from "next/navigation";
 
 type Mode = "signin" | "signup";
 
@@ -444,8 +445,10 @@ function BrandPanel() {
 /* ─── MAIN AUTH PAGE ─────────────────────────────────────────── */
 export default function JBRAuth() {
   const [mode,      setMode]      = useState<Mode>("signin");
+  const router = useRouter();
   const [loading,   setLoading]   = useState(false);
   const [success,   setSuccess]   = useState(false);
+  const [errorMsg,  setErrorMsg]  = useState("");
   const [formKey,   setFormKey]   = useState(0);
   const [opacity,   setOpacity]   = useState(1);
   const [yOff,      setYOff]      = useState(0);
@@ -462,6 +465,7 @@ export default function JBRAuth() {
     const d = next === "signup" ? 1 : -1;
     setOpacity(0);
     setYOff(-12 * d);
+    setErrorMsg(""); // Clear errors on tab switch
     setTimeout(() => {
       setMode(next);
       setFormKey(k => k + 1);
@@ -470,9 +474,51 @@ export default function JBRAuth() {
     }, 260);
   }, [mode]);
 
-  const submit = () => {
+  const submit = async () => {
     setLoading(true);
-    setTimeout(() => { setLoading(false); setSuccess(true); }, 1800);
+    setErrorMsg("");
+    
+    try {
+      const url = mode === "signin" 
+        ? "https://jbrstaffingsolutions.com/api/users/login" 
+        : "https://jbrstaffingsolutions.com/api/users/signup";
+        
+      const bodyData = mode === "signin"
+        ? { email, password: pwd }
+        : { firstName: first, lastName: last, email: signEmail, password: signPwd };
+
+      const response = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(bodyData),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        if (mode === "signin" && data.token) {
+          // Save token
+          localStorage.setItem("jbr_token", data.token);
+          
+          // Save user object (stringified)
+          if (data.user) {
+            localStorage.setItem("jbr_user", JSON.stringify(data.user));
+          }
+        }
+        setSuccess(true);
+        // Wait 1.2s to let the success animation finish, then route
+        setTimeout(() => {
+          router.push("/dashboard");
+        }, 1200);
+      } else {
+        setErrorMsg(data.message || "Authentication failed. Please try again.");
+      }
+    } catch (error) {
+      console.error("API Error:", error);
+      setErrorMsg("A network error occurred. Please try again.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   const emailIcon = (
@@ -539,6 +585,13 @@ export default function JBRAuth() {
                     <>
                       <Field label="Email Address" type="email" placeholder="you@jbrstaffingsolutions.com" value={email} onChange={setEmail} autoComplete="email" icon={emailIcon} delay={0.05} />
                       <Field label="Password" type="password" placeholder="Enter your password" value={pwd} onChange={setPwd} autoComplete="current-password" icon={lockIcon} hint="Forgot password?" delay={0.1} />
+                      
+                      {errorMsg && (
+                        <div style={{ color: C.red, fontSize: "12px", marginBottom: "12px", textAlign: "center", fontFamily: "'DM Sans',sans-serif", fontWeight: 500 }}>
+                          {errorMsg}
+                        </div>
+                      )}
+
                       <PrimaryBtn label="Sign In" loading={loading} onClick={submit} />
                       
                       <div style={{ display: "flex", alignItems: "center", margin: "24px 0 8px" }}>
@@ -564,6 +617,13 @@ export default function JBRAuth() {
                         {" "}&amp;{" "}
                         <span style={{ color: C.textLabel, fontWeight: 600, cursor: "pointer", borderBottom: `1px solid ${C.borderHover}` }}>Privacy Policy</span>.
                       </p>
+
+                      {errorMsg && (
+                        <div style={{ color: C.red, fontSize: "12px", marginBottom: "12px", textAlign: "center", fontFamily: "'DM Sans',sans-serif", fontWeight: 500 }}>
+                          {errorMsg}
+                        </div>
+                      )}
+
                       <PrimaryBtn label="Create Account" loading={loading} onClick={submit} />
                       
                       <div style={{ display: "flex", alignItems: "center", margin: "24px 0 8px" }}>
