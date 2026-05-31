@@ -494,17 +494,26 @@ export default function JBRAuth() {
       });
 
       const data = await response.json();
-
-      if (response.ok) {
-        if (mode === "signin" && data.token) {
-          // Save token
-          localStorage.setItem("jbr_token", data.token);
+      
+if (response.ok) {
+        if (mode === "signin") {
+          // Save login token and user
+          if (data.token) localStorage.setItem("jbr_token", data.token);
+          if (data.user) localStorage.setItem("jbr_user", JSON.stringify(data.user));
+        } else if (mode === "signup") {
+          // Construct the user object from the signup response fields
+          const newUser = {
+            id: data.id,
+            firstName: data.firstName,
+            lastName: data.lastName,
+            email: data.email
+          };
+          localStorage.setItem("jbr_user", JSON.stringify(newUser));
           
-          // Save user object (stringified)
-          if (data.user) {
-            localStorage.setItem("jbr_user", JSON.stringify(data.user));
-          }
+          // Note: If your dashboard requires a token to remain logged in, 
+          // you may also need to set a "jbr_token" here if your API updates to send one on signup.
         }
+
         setSuccess(true);
         // Wait 1.2s to let the success animation finish, then route
         setTimeout(() => {
