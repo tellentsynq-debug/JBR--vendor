@@ -1,7 +1,8 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useRouter } from "next/navigation";
 import { LogOut, Plus, Search, Copy, Check, Edit2, EyeOff, X, Calendar as CalendarIcon } from "lucide-react";
 import Sidebar from "../components/Sidebar";
 
@@ -62,6 +63,10 @@ const GLOBAL_CSS = `
     cursor: pointer;
     opacity: 0.6;
   }
+
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
 `;
 
 /* ─── MOCK DATA ──────────────────────────────────────────────── */
@@ -80,6 +85,26 @@ const itemVars = { hidden: { opacity: 0, y: 15 }, show: { opacity: 1, y: 0, tran
 /* ─── COMPONENTS ─────────────────────────────────────────────── */
 
 function TopNav() {
+  const router = useRouter();
+  const [user, setUser] = useState<{ firstName?: string, email?: string } | null>(null);
+
+  useEffect(() => {
+    const storedUser = localStorage.getItem("jbr_user");
+    if (storedUser) {
+      try {
+        setUser(JSON.parse(storedUser));
+      } catch (e) {
+        console.error("Failed to parse user data", e);
+      }
+    }
+  }, []);
+
+  const handleSignOut = () => {
+    localStorage.removeItem("jbr_token");
+    localStorage.removeItem("jbr_user");
+    router.push("/"); // Directs back to auth/home
+  };
+
   return (
     <motion.header 
       initial={{ y: -20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ duration: 0.6, ease: easeOutCirc }}
@@ -96,9 +121,12 @@ function TopNav() {
       
       <div style={{ display: "flex", alignItems: "center", gap: "24px" }}>
         <span style={{ fontSize: "13px", color: C.textMuted }}>
-          Welcome, <span style={{ color: C.textHeading, fontWeight: 500 }}>support@jbrstaffingsolutions.ca</span>
+          Welcome, <span style={{ color: C.textHeading, fontWeight: 500 }}>
+            {user ? (user.firstName ? `${user.firstName} (${user.email})` : user.email) : "Loading..."}
+          </span>
         </span>
         <motion.button 
+          onClick={handleSignOut}
           whileHover={{ backgroundColor: C.redActiveBg, borderColor: C.red, color: C.red }} whileTap={{ scale: 0.98 }}
           style={{ display: "flex", alignItems: "center", gap: "8px", padding: "8px 16px", background: "transparent", border: `1px solid ${C.border}`, borderRadius: "6px", color: C.textLabel, fontSize: "13px", fontWeight: 500, cursor: "pointer", transition: "all 0.2s ease" }}>
           Sign Out <LogOut size={16} />
@@ -136,8 +164,15 @@ function CopyLinkButton() {
   );
 }
 
-// Custom Input Field for the Dialog
-function FormField({ label, placeholder, isDate = false }: { label: string, placeholder: string, isDate?: boolean }) {
+// Custom Input Field
+interface FormFieldProps {
+  label: string;
+  placeholder: string;
+  isDate?: boolean;
+  value: string;
+  onChange: (v: string) => void;
+}
+function FormField({ label, placeholder, isDate = false, value, onChange }: FormFieldProps) {
   const [focused, setFocused] = useState(false);
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "8px", flex: 1 }}>
@@ -146,6 +181,8 @@ function FormField({ label, placeholder, isDate = false }: { label: string, plac
         <input 
           type={isDate ? "date" : "text"} 
           placeholder={placeholder}
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
           onFocus={() => setFocused(true)}
           onBlur={() => setFocused(false)}
           style={{
@@ -166,9 +203,64 @@ function FormField({ label, placeholder, isDate = false }: { label: string, plac
 export default function CampaignsPage() {
   const [isSidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [activeTab, setActiveTab] = useState("campaigns");
+  
+  // Modal & Form State
   const [isModalOpen, setModalOpen] = useState(false);
+  const [campaignName, setCampaignName] = useState("");
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const [isSuccess, setIsSuccess] = useState(false);
+  const [errorMsg, setErrorMsg] = useState("");
 
   const tableGridTemplate = "1.5fr 1fr 1fr 1fr 1.5fr 0.8fr"; 
+
+  const handleCreateCampaign = async () => {
+    if (!campaignName || !startDate || !endDate) {
+      setErrorMsg("Please fill in all fields.");
+      return;
+    }
+
+    setIsLoading(true);
+    setErrorMsg("");
+
+    try {
+      const token = localStorage.getItem("jbr_token");
+      
+      const response = await fetch("https://jbrstaffingsolutions.com/api/campaigns", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}` // Passing the bearer token
+        },
+        body: JSON.stringify({
+          name: campaignName,
+          startDate: startDate,
+          endDate: endDate
+        }),
+      });
+
+      if (response.ok) {
+        setIsSuccess(true);
+        setTimeout(() => {
+          setCampaignName("");
+          setStartDate("");
+          setEndDate("");
+          setIsSuccess(false);
+          setModalOpen(false);
+          // Note: You would typically refetch your campaigns list here
+        }, 1500);
+      } else {
+        const data = await response.json();
+        setErrorMsg(data.message || "Failed to create campaign.");
+      }
+    } catch (error) {
+      console.error("Campaign Creation Error:", error);
+      setErrorMsg("A network error occurred. Please try again.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   return (
     <>
@@ -321,7 +413,7 @@ export default function CampaignsPage() {
             <motion.div 
               initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.3 }}
               style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.4)" }}
-              onClick={() => setModalOpen(false)}
+              onClick={() => { if (!isLoading && !isSuccess) setModalOpen(false); }}
             />
 
             {/* Modal Content */}
@@ -337,7 +429,8 @@ export default function CampaignsPage() {
               {/* Close Button */}
               <button 
                 onClick={() => setModalOpen(false)}
-                style={{ position: "absolute", right: "24px", top: "24px", background: "transparent", border: "none", color: C.textHint, cursor: "pointer", transition: "color 0.2s" }}
+                disabled={isLoading || isSuccess}
+                style={{ position: "absolute", right: "24px", top: "24px", background: "transparent", border: "none", color: C.textHint, cursor: isLoading || isSuccess ? "not-allowed" : "pointer", transition: "color 0.2s" }}
                 onMouseEnter={(e) => e.currentTarget.style.color = C.textHeading}
                 onMouseLeave={(e) => e.currentTarget.style.color = C.textHint}
               >
@@ -351,26 +444,64 @@ export default function CampaignsPage() {
 
               <div style={{ padding: "0 32px 32px", display: "flex", flexDirection: "column", gap: "24px" }}>
                 
-                <FormField label="Campaign Name" placeholder="Enter campaign name" />
+                <FormField 
+                  label="Campaign Name" 
+                  placeholder="Enter campaign name" 
+                  value={campaignName}
+                  onChange={setCampaignName}
+                />
                 
                 <div style={{ display: "flex", gap: "16px" }}>
-                  <FormField label="Start Date" placeholder="Pick start date" isDate />
-                  <FormField label="End Date" placeholder="Pick end date" isDate />
+                  <FormField 
+                    label="Start Date" 
+                    placeholder="Pick start date" 
+                    isDate 
+                    value={startDate}
+                    onChange={setStartDate}
+                  />
+                  <FormField 
+                    label="End Date" 
+                    placeholder="Pick end date" 
+                    isDate 
+                    value={endDate}
+                    onChange={setEndDate}
+                  />
                 </div>
 
+                {errorMsg && (
+                  <div style={{ color: C.red, fontSize: "13px", fontWeight: 500, marginTop: "-8px" }}>
+                    {errorMsg}
+                  </div>
+                )}
+
                 <motion.button 
-                  whileHover={{ y: -2, boxShadow: `0 8px 24px ${C.redGlow}` }} whileTap={{ scale: 0.98 }}
+                  disabled={isLoading || isSuccess}
+                  onClick={handleCreateCampaign}
+                  whileHover={isLoading || isSuccess ? {} : { y: -2, boxShadow: `0 8px 24px ${C.redGlow}` }} 
+                  whileTap={isLoading || isSuccess ? {} : { scale: 0.98 }}
                   style={{
                     width: "100%", padding: "14px", marginTop: "8px",
-                    background: `linear-gradient(135deg, ${C.redBright}, ${C.red})`,
-                    border: "none", borderRadius: "10px",
+                    background: isSuccess ? "#059669" : `linear-gradient(135deg, ${C.redBright}, ${C.red})`,
+                    border: "none", borderRadius: "10px", display: "flex", justifyContent: "center", alignItems: "center", gap: "8px",
                     color: C.white, fontSize: "15px", fontWeight: 600, letterSpacing: "0.5px",
-                    cursor: "pointer", position: "relative", overflow: "hidden",
-                    boxShadow: `0 4px 16px ${C.redGlow}`
+                    cursor: isLoading || isSuccess ? "default" : "pointer", position: "relative", overflow: "hidden",
+                    boxShadow: isSuccess ? "0 4px 16px rgba(5,150,105,0.25)" : `0 4px 16px ${C.redGlow}`,
+                    opacity: isLoading ? 0.8 : 1,
+                    transition: "background 0.3s ease, box-shadow 0.3s ease"
                   }}
-                  onClick={() => setModalOpen(false)}
                 >
-                  <span style={{ position: "relative", zIndex: 1 }}>Create Campaign</span>
+                  {isLoading ? (
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" style={{ animation: "spin 0.7s linear infinite" }}>
+                      <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>
+                    </svg>
+                  ) : isSuccess ? (
+                    <>
+                      <Check size={18} strokeWidth={2.5} />
+                      <span style={{ position: "relative", zIndex: 1 }}>Campaign Created!</span>
+                    </>
+                  ) : (
+                    <span style={{ position: "relative", zIndex: 1 }}>Create Campaign</span>
+                  )}
                 </motion.button>
               </div>
             </motion.div>
