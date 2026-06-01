@@ -73,13 +73,97 @@ const MOCK_JOB_CATEGORIES = [
 
 const MOCK_PROVINCES = [
   { id: "prov-1", name: "British Columbia" },
-  { id: "prov-2", name: "Ontario" }
+  { id: "prov-2", name: "Ontario" },
+  { id: "prov-3", name: "Alberta" }
 ];
 
+// ─── ALL CANADIAN CITIES (grouped by province) ───────────────
 const MOCK_CITIES = [
-  { id: "city-1", name: "Surrey" },
-  { id: "city-2", name: "Vancouver" },
-  { id: "city-3", name: "Toronto" }
+  // Alberta
+  { id: "city-ab-1",  name: "Calgary",         province: "Alberta" },
+  { id: "city-ab-2",  name: "Edmonton",         province: "Alberta" },
+  { id: "city-ab-3",  name: "Red Deer",         province: "Alberta" },
+  { id: "city-ab-4",  name: "Lethbridge",       province: "Alberta" },
+  { id: "city-ab-5",  name: "St. Albert",       province: "Alberta" },
+  { id: "city-ab-6",  name: "Medicine Hat",     province: "Alberta" },
+  { id: "city-ab-7",  name: "Grande Prairie",   province: "Alberta" },
+  { id: "city-ab-8",  name: "Airdrie",          province: "Alberta" },
+  { id: "city-ab-9",  name: "Spruce Grove",     province: "Alberta" },
+  { id: "city-ab-10", name: "Leduc",            province: "Alberta" },
+  { id: "city-ab-11", name: "Fort McMurray",    province: "Alberta" },
+  { id: "city-ab-12", name: "Beaumont",         province: "Alberta" },
+  { id: "city-ab-13", name: "Chestermere",      province: "Alberta" },
+  { id: "city-ab-14", name: "Lloydminster",     province: "Alberta" },
+  { id: "city-ab-15", name: "Camrose",          province: "Alberta" },
+  { id: "city-ab-16", name: "Lacombe",          province: "Alberta" },
+  { id: "city-ab-17", name: "Cochrane",         province: "Alberta" },
+  { id: "city-ab-18", name: "Okotoks",          province: "Alberta" },
+  { id: "city-ab-19", name: "Banff",            province: "Alberta" },
+  { id: "city-ab-20", name: "Jasper",           province: "Alberta" },
+
+  // British Columbia
+  { id: "city-bc-1",  name: "Vancouver",        province: "British Columbia" },
+  { id: "city-bc-2",  name: "Surrey",           province: "British Columbia" },
+  { id: "city-bc-3",  name: "Burnaby",          province: "British Columbia" },
+  { id: "city-bc-4",  name: "Richmond",         province: "British Columbia" },
+  { id: "city-bc-5",  name: "Kelowna",          province: "British Columbia" },
+  { id: "city-bc-6",  name: "Abbotsford",       province: "British Columbia" },
+  { id: "city-bc-7",  name: "Coquitlam",        province: "British Columbia" },
+  { id: "city-bc-8",  name: "Langley",          province: "British Columbia" },
+  { id: "city-bc-9",  name: "Saanich",          province: "British Columbia" },
+  { id: "city-bc-10", name: "Delta",            province: "British Columbia" },
+  { id: "city-bc-11", name: "Kamloops",         province: "British Columbia" },
+  { id: "city-bc-12", name: "Nanaimo",          province: "British Columbia" },
+  { id: "city-bc-13", name: "Chilliwack",       province: "British Columbia" },
+  { id: "city-bc-14", name: "Maple Ridge",      province: "British Columbia" },
+  { id: "city-bc-15", name: "Victoria",         province: "British Columbia" },
+  { id: "city-bc-16", name: "North Vancouver",  province: "British Columbia" },
+  { id: "city-bc-17", name: "Prince George",    province: "British Columbia" },
+  { id: "city-bc-18", name: "New Westminster",  province: "British Columbia" },
+  { id: "city-bc-19", name: "West Vancouver",   province: "British Columbia" },
+  { id: "city-bc-20", name: "Penticton",        province: "British Columbia" },
+  { id: "city-bc-21", name: "Vernon",           province: "British Columbia" },
+  { id: "city-bc-22", name: "Port Coquitlam",   province: "British Columbia" },
+  { id: "city-bc-23", name: "Port Moody",       province: "British Columbia" },
+  { id: "city-bc-24", name: "White Rock",       province: "British Columbia" },
+  { id: "city-bc-25", name: "Mission",          province: "British Columbia" },
+  { id: "city-bc-26", name: "Cranbrook",        province: "British Columbia" },
+  { id: "city-bc-27", name: "Fort St. John",    province: "British Columbia" },
+  { id: "city-bc-28", name: "Courtenay",        province: "British Columbia" },
+  { id: "city-bc-29", name: "Pitt Meadows",     province: "British Columbia" },
+  { id: "city-bc-30", name: "Squamish",         province: "British Columbia" },
+
+  // Ontario
+  { id: "city-on-1",  name: "Toronto",          province: "Ontario" },
+  { id: "city-on-2",  name: "Ottawa",           province: "Ontario" },
+  { id: "city-on-3",  name: "Mississauga",      province: "Ontario" },
+  { id: "city-on-4",  name: "Brampton",         province: "Ontario" },
+  { id: "city-on-5",  name: "Hamilton",         province: "Ontario" },
+  { id: "city-on-6",  name: "London",           province: "Ontario" },
+  { id: "city-on-7",  name: "Markham",          province: "Ontario" },
+  { id: "city-on-8",  name: "Vaughan",          province: "Ontario" },
+  { id: "city-on-9",  name: "Kitchener",        province: "Ontario" },
+  { id: "city-on-10", name: "Windsor",          province: "Ontario" },
+  { id: "city-on-11", name: "Richmond Hill",    province: "Ontario" },
+  { id: "city-on-12", name: "Oakville",         province: "Ontario" },
+  { id: "city-on-13", name: "Burlington",       province: "Ontario" },
+  { id: "city-on-14", name: "Greater Sudbury",  province: "Ontario" },
+  { id: "city-on-15", name: "Oshawa",           province: "Ontario" },
+  { id: "city-on-16", name: "Barrie",           province: "Ontario" },
+  { id: "city-on-17", name: "St. Catharines",   province: "Ontario" },
+  { id: "city-on-18", name: "Cambridge",        province: "Ontario" },
+  { id: "city-on-19", name: "Kingston",         province: "Ontario" },
+  { id: "city-on-20", name: "Whitby",           province: "Ontario" },
+  { id: "city-on-21", name: "Guelph",           province: "Ontario" },
+  { id: "city-on-22", name: "Ajax",             province: "Ontario" },
+  { id: "city-on-23", name: "Thunder Bay",      province: "Ontario" },
+  { id: "city-on-24", name: "Waterloo",         province: "Ontario" },
+  { id: "city-on-25", name: "Chatham-Kent",     province: "Ontario" },
+  { id: "city-on-26", name: "Pickering",        province: "Ontario" },
+  { id: "city-on-27", name: "Niagara Falls",    province: "Ontario" },
+  { id: "city-on-28", name: "Clarington",       province: "Ontario" },
+  { id: "city-on-29", name: "Brantford",        province: "Ontario" },
+  { id: "city-on-30", name: "Halton Hills",     province: "Ontario" },
 ];
 
 const EMPLOYEES_DATA = [
@@ -161,6 +245,14 @@ export default function EmployeesPage() {
   const endIndex = Math.min(startIndex + pageSize, totalItems);
   
   const tableGridTemplate = "40px 1.2fr 1.8fr 1.2fr 0.8fr 1.2fr 1.5fr 0.8fr 1fr 1.8fr 100px"; 
+
+  // Filter cities by selected province
+  const filteredCities = provinceFilter === "all"
+    ? MOCK_CITIES
+    : MOCK_CITIES.filter(city => {
+        const province = MOCK_PROVINCES.find(p => p.id === provinceFilter);
+        return province ? city.province === province.name : true;
+      });
 
   const toggleRow = (id: number) => {
     setSelectedEmployees(prev => prev.includes(id) ? prev.filter(r => r !== id) : [...prev, id]);
@@ -282,7 +374,7 @@ export default function EmployeesPage() {
                   </div>
                 </div>
 
-                {/* City */}
+                {/* City — filtered by selected province, all 80 cities when province = "all" */}
                 <div>
                   <label style={{ display: "block", fontSize: "12px", fontWeight: 600, color: C.textLabel, marginBottom: "8px" }}>City</label>
                   <div style={{ position: "relative" }}>
@@ -295,7 +387,9 @@ export default function EmployeesPage() {
                       }}
                     >
                       <option value="all">All Cities</option>
-                      {MOCK_CITIES.map(city => <option key={city.id} value={city.id}>{city.name}</option>)}
+                      {filteredCities.map(city => (
+                        <option key={city.id} value={city.id}>{city.name}</option>
+                      ))}
                     </select>
                     <ChevronDown size={14} color={C.textHint} style={{ position: "absolute", right: "12px", top: "50%", transform: "translateY(-50%)", pointerEvents: "none" }} />
                   </div>
