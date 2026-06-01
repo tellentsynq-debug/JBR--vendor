@@ -72,7 +72,6 @@ interface Category {
   created_at?: string;
 }
 
-/* ─── API HELPERS ────────────────────────────────────────────── */
 function getAuthHeaders(): Record<string, string> {
   const token =
     typeof window !== "undefined"
