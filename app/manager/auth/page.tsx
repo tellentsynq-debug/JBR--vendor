@@ -2,7 +2,6 @@
 
 import { useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import path from "path";
 
 type Mode = "signin" | "signup";
 
@@ -96,7 +95,7 @@ const GLOBAL_CSS = `
 
 /* ─── TICKER ─────────────────────────────────────────────────── */
 function Ticker() {
-  const items = ["Talent Redefined", "500+ Partners", "10,000+ Placed", "Redefining Culture", "India's Premier Staffing", "People First"];
+  const items = ["Operational Excellence", "Client Success", "Team Leadership", "Driving Growth", "Strategic Placements", "Efficiency First"];
   const doubled = [...items, ...items];
   return (
     <div style={{
@@ -144,14 +143,14 @@ function Logo({ animate }: { animate?: boolean }) {
         </div>
         <div style={{ display: "flex", flexDirection: "column", justifyContent: "center", padding: "0 12px", gap: "1px" }}>
           <span style={{ fontFamily: "'DM Sans', sans-serif", fontSize: "9.5px", letterSpacing: "4px", color: C.textHeading, textTransform: "uppercase" }}>STAFFING</span>
-          <span style={{ fontFamily: "'DM Sans', sans-serif", fontSize: "9.5px", letterSpacing: "4px", color: C.textMuted, textTransform: "uppercase" }}>SOLUTIONS</span>
+          <span style={{ fontFamily: "'DM Sans', sans-serif", fontSize: "9.5px", letterSpacing: "4px", color: C.textMuted, textTransform: "uppercase" }}>MANAGER PORTAL</span>
         </div>
       </div>
       <div style={{
         display: "flex", alignItems: "center", gap: "8px", fontSize: "9px", letterSpacing: "2.5px", color: C.textMuted, textTransform: "uppercase", fontFamily: "'DM Sans', sans-serif",
       }}>
         <div style={{ width: "20px", height: "1px", background: C.border }} />
-        Redefining People &amp; Culture
+        Operations &amp; Leadership
         <div style={{ width: "20px", height: "1px", background: C.border }} />
       </div>
     </div>
@@ -191,7 +190,7 @@ function ModeTabs({ mode, onSwitch }: { mode: Mode; onSwitch: (m: Mode) => void 
                 width: "3px", height: "16px", background: C.red, borderRadius: "0 2px 2px 0"
               }} />
             )}
-            {m === "signin" ? "Sign In" : "Register"}
+            {m === "signin" ? "Manager Login" : "Apply for Access"}
           </button>
         );
       })}
@@ -379,10 +378,10 @@ function SuccessFlash({ visible, mode }: { visible: boolean; mode: Mode }) {
         </svg>
       </div>
       <p style={{ color: C.textHeading, fontSize: "18px", fontFamily: "'Cormorant Garamond',serif", fontWeight: 600, letterSpacing: "1px", marginBottom: "8px" }}>
-        {mode === "signin" ? "Welcome back." : "Account created."}
+        {mode === "signin" ? "Welcome back, Manager." : "Application received."}
       </p>
       <p style={{ color: C.textMuted, fontSize: "13px", fontFamily: "'DM Sans',sans-serif", letterSpacing: "0.5px" }}>
-        Redirecting…
+        Redirecting to dashboard…
       </p>
     </div>
   );
@@ -404,19 +403,19 @@ function BrandPanel() {
             fontSize: "11px", letterSpacing: "3.5px", textTransform: "uppercase", color: C.textLabel, fontFamily: "'DM Sans',sans-serif", fontWeight: 600, marginBottom: "20px", display: "flex", alignItems: "center", gap: "10px",
           }}>
             <div style={{ width: "20px", height: "1px", background: C.borderHover }} />
-            Est. 2015
+            Internal Portal
           </div>
           <h1 style={{
             fontFamily: "'Cormorant Garamond', serif", fontWeight: 400, fontSize: "46px", lineHeight: 1.1, color: C.textHeading, letterSpacing: "-0.5px", marginBottom: "8px",
           }}>
-            People are
-            <br />our <span style={{ color: C.red, fontWeight: 600, fontStyle: "italic" }}>greatest</span>
-            <br />asset.
+            Empowering
+            <br />teams to <span style={{ color: C.red, fontWeight: 600, fontStyle: "italic" }}>succeed</span>
+            <br />together.
           </h1>
           <p style={{
             fontSize: "14px", color: C.textMuted, lineHeight: 1.75, fontFamily: "'DM Sans',sans-serif", marginTop: "20px", maxWidth: "420px",
           }}>
-            We connect exceptional talent with organisations that value culture. Your career journey deserves a partner that truly understands.
+            As a manager, you drive the operational heartbeat of JBR. Access your portal to oversee placements, mentor your teams, and manage client relations.
           </p>
         </div>
       </div>
@@ -425,9 +424,9 @@ function BrandPanel() {
         <div style={{ height: "1px", background: C.border, marginBottom: "28px" }} />
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "0" }}>
           {[
-            { num: "500+", label: "Companies" },
-            { num: "10K+", label: "Placed" },
-            { num: "98%",  label: "Satisfaction" },
+            { num: "150+", label: "Active Teams" },
+            { num: "95%",  label: "Fill Rate" },
+            { num: "4.9",  label: "CSAT Score" },
           ].map((s, i) => (
             <div key={s.label} className="stat-item" style={{ borderRight: i < 2 ? `1px solid ${C.border}` : "none", paddingRight: i < 2 ? "20px" : "0", paddingLeft: i > 0 ? "20px" : "0" }}>
               <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: "26px", fontWeight: 600, color: C.textHeading, lineHeight: 1, marginBottom: "6px" }}>{s.num}</div>
@@ -444,7 +443,7 @@ function BrandPanel() {
 }
 
 /* ─── MAIN AUTH PAGE ─────────────────────────────────────────── */
-export default function JBRAuth() {
+export default function JBRManagerAuth() {
   const [mode,      setMode]      = useState<Mode>("signin");
   const router = useRouter();
   const [loading,   setLoading]   = useState(false);
@@ -480,9 +479,10 @@ export default function JBRAuth() {
     setErrorMsg("");
     
     try {
+      // Switched to internal/manager specific endpoints
       const url = mode === "signin" 
-        ? "https://jbrstaffingsolutions.com/api/users/login" 
-        : "https://jbrstaffingsolutions.com/api/users/signup";
+        ? "https://jbrstaffingsolutions.com/api/managers/login" 
+        : "https://jbrstaffingsolutions.com/api/managers/signup";
         
       const bodyData = mode === "signin"
         ? { email, password: pwd }
@@ -498,27 +498,24 @@ export default function JBRAuth() {
       
       if (response.ok) {
         if (mode === "signin") {
-          // Save login token and user
-          if (data.token) localStorage.setItem("jbr_token", data.token);
-          if (data.user) localStorage.setItem("jbr_user", JSON.stringify(data.user));
+          // Save login token and manager specific user data
+          if (data.token) localStorage.setItem("jbr_manager_token", data.token);
+          if (data.user) localStorage.setItem("jbr_manager", JSON.stringify(data.user));
         } else if (mode === "signup") {
-          // Construct the user object from the signup response fields
           const newUser = {
             id: data.id,
             firstName: data.firstName,
             lastName: data.lastName,
-            email: data.email
+            email: data.email,
+            role: "manager"
           };
-          localStorage.setItem("jbr_user", JSON.stringify(newUser));
-          
-          // Note: If your dashboard requires a token to remain logged in, 
-          // you may also need to set a "jbr_token" here if your API updates to send one on signup.
+          localStorage.setItem("jbr_manager", JSON.stringify(newUser));
         }
 
         setSuccess(true);
-        // Wait 1.2s to let the success animation finish, then route
+        // Wait 1.2s to let the success animation finish, then route to the manager dashboard
         setTimeout(() => {
-          router.push("/dashboard");
+          router.push("/manager/dashboard");
         }, 1200);
       } else {
         setErrorMsg(data.message || "Authentication failed. Please try again.");
@@ -593,8 +590,8 @@ export default function JBRAuth() {
                 >
                   {mode === "signin" ? (
                     <>
-                      <Field label="Email Address" type="email" placeholder="you@jbrstaffingsolutions.com" value={email} onChange={setEmail} autoComplete="email" icon={emailIcon} delay={0.05} />
-                      <Field label="Password" type="password" placeholder="Enter your password" value={pwd} onChange={setPwd} autoComplete="current-password" icon={lockIcon} hint="Forgot password?" delay={0.1} />
+                      <Field label="Manager Email" type="email" placeholder="manager@jbrstaffingsolutions.com" value={email} onChange={setEmail} autoComplete="email" icon={emailIcon} delay={0.05} />
+                      <Field label="Password" type="password" placeholder="Enter your portal password" value={pwd} onChange={setPwd} autoComplete="current-password" icon={lockIcon} hint="Forgot password?" delay={0.1} />
                       
                       {errorMsg && (
                         <div style={{ color: C.red, fontSize: "12px", marginBottom: "12px", textAlign: "center", fontFamily: "'DM Sans',sans-serif", fontWeight: 500 }}>
@@ -610,22 +607,22 @@ export default function JBRAuth() {
                          <div style={{ flex: 1, height: "1px", background: C.border }} />
                       </div>
                       
-                      <GhostBtn label="Create an Account" onClick={() => switchMode("signup")} />
+                      <GhostBtn label="Request Manager Access" onClick={() => switchMode("signup")} />
                     </>
                   ) : (
                     <>
                       <div style={{ display: "flex", gap: "12px" }}>
-                        <div style={{ flex: 1 }}><Field label="First" placeholder="Jane" value={first} onChange={setFirst} autoComplete="given-name" icon={userIcon} delay={0.05} /></div>
-                        <div style={{ flex: 1 }}><Field label="Last" placeholder="Doe" value={last} onChange={setLast} autoComplete="family-name" delay={0.1} /></div>
+                        <div style={{ flex: 1 }}><Field label="First Name" placeholder="Jane" value={first} onChange={setFirst} autoComplete="given-name" icon={userIcon} delay={0.05} /></div>
+                        <div style={{ flex: 1 }}><Field label="Last Name" placeholder="Doe" value={last} onChange={setLast} autoComplete="family-name" delay={0.1} /></div>
                       </div>
-                      <Field label="Work Email" type="email" placeholder="you@jbrstaffingsolutions.com" value={signEmail} onChange={setSignEmail} autoComplete="email" icon={emailIcon} hint="@jbrstaffingsolutions.com" delay={0.15} />
+                      <Field label="Work Email" type="email" placeholder="manager@jbrstaffingsolutions.com" value={signEmail} onChange={setSignEmail} autoComplete="email" icon={emailIcon} hint="@jbrstaffingsolutions.com" delay={0.15} />
                       <Field label="Password" type="password" placeholder="Create a strong password" value={signPwd} onChange={setSignPwd} autoComplete="new-password" icon={lockIcon} delay={0.2} />
                       <PwdStrength pwd={signPwd} />
                       <p style={{ fontSize: "11px", color: C.textMuted, lineHeight: 1.7, marginBottom: "16px" }}>
-                        By registering you agree to our{" "}
-                        <span style={{ color: C.textLabel, fontWeight: 600, cursor: "pointer", borderBottom: `1px solid ${C.borderHover}` }}>Terms</span>
+                        By registering you agree to the internal{" "}
+                        <span style={{ color: C.textLabel, fontWeight: 600, cursor: "pointer", borderBottom: `1px solid ${C.borderHover}` }}>Manager Conduct Policy</span>
                         {" "}&amp;{" "}
-                        <span style={{ color: C.textLabel, fontWeight: 600, cursor: "pointer", borderBottom: `1px solid ${C.borderHover}` }}>Privacy Policy</span>.
+                        <span style={{ color: C.textLabel, fontWeight: 600, cursor: "pointer", borderBottom: `1px solid ${C.borderHover}` }}>Data Privacy Terms</span>.
                       </p>
 
                       {errorMsg && (
@@ -634,7 +631,7 @@ export default function JBRAuth() {
                         </div>
                       )}
 
-                      <PrimaryBtn label="Create Account" loading={loading} onClick={submit} />
+                      <PrimaryBtn label="Submit Application" loading={loading} onClick={submit} />
                       
                       <div style={{ display: "flex", alignItems: "center", margin: "24px 0 8px" }}>
                          <div style={{ flex: 1, height: "1px", background: C.border }} />
@@ -642,51 +639,10 @@ export default function JBRAuth() {
                          <div style={{ flex: 1, height: "1px", background: C.border }} />
                       </div>
 
-                      <GhostBtn label="Sign in to existing account" onClick={() => switchMode("signin")} />
+                      <GhostBtn label="Return to Login" onClick={() => switchMode("signin")} />
                     </>
                   )}
                 </div>
-
-                {/* ─── MANAGER LOGIN NAVIGATION BUTTON ─── */}
-                <div style={{ marginTop: "32px", animation: "fadeIn 0.5s ease 0.3s both" }}>
-                  <button
-                    onClick={() => router.push("/manager")}
-                    style={{
-                      width: "100%",
-                      padding: "12px",
-                      background: "transparent",
-                      border: `1px solid ${C.border}`,
-                      borderRadius: "10px",
-                      color: C.textLabel,
-                      fontSize: "13px",
-                      fontWeight: 600,
-                      fontFamily: "'DM Sans',sans-serif",
-                      cursor: "pointer",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      gap: "8px",
-                      transition: "all 0.2s ease",
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.color = C.red;
-                      e.currentTarget.style.borderColor = C.red;
-                      e.currentTarget.style.backgroundColor = C.redActiveBg;
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.color = C.textLabel;
-                      e.currentTarget.style.borderColor = C.border;
-                      e.currentTarget.style.backgroundColor = "transparent";
-                    }}
-                  >
-                    Manager Login / Signup
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M5 12h14"></path>
-                      <path d="M12 5l7 7-7 7"></path>
-                    </svg>
-                  </button>
-                </div>
-
               </div>
             </div>
 
