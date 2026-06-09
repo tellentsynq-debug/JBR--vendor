@@ -64,9 +64,10 @@ interface Campaign {
   name: string;
   start_date: string;
   end_date: string;
-  status: string; // "active" | "inactive" | "draft" | etc.
+  status: string;
   created_at?: string;
   link?: string;
+  token?: string; 
 }
 
 /* ─── HELPERS ────────────────────────────────────────────────── */
@@ -91,6 +92,16 @@ function formatDate(iso: string): string {
 function toInputDate(iso: string): string {
   if (!iso) return "";
   return iso.split("T")[0];
+}
+
+/**
+ * Generates the candidate-facing registration link for a campaign.
+ * Dynamically uses the current origin (e.g., localhost or production domain).
+ */
+function getCampaignLink(camp: Campaign): string {
+  const tokenValue = camp.token ?? camp.link ?? String(camp.id);
+  const baseUrl = typeof window !== "undefined" ? window.location.origin : "";
+  return `${baseUrl}/employee-register?token=${tokenValue}`;
 }
 
 /* ─── ANIMATION VARIANTS ─────────────────────────────────────── */
@@ -161,11 +172,11 @@ function TopNav() {
 }
 
 /* ─── COPY LINK BUTTON ───────────────────────────────────────── */
-function CopyLinkButton({ campaignId }: { campaignId: number }) {
+function CopyLinkButton({ campaign }: { campaign: Campaign }) {
   const [copied, setCopied] = useState(false);
 
   const handleCopy = () => {
-    const link = `https://jbrstaffingsolutions.com/apply/${campaignId}`;
+    const link = getCampaignLink(campaign);
     navigator.clipboard.writeText(link).catch(() => {});
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
@@ -247,7 +258,6 @@ function StatusBadge({ status }: { status: string }) {
       </div>
     );
   }
-  // fallback
   return (
     <div style={{ display: "inline-flex", alignItems: "center", padding: "6px 12px", borderRadius: "20px", background: C.alertBg, color: C.alertText, fontSize: "11px", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.5px" }}>
       {status || "Unknown"}
@@ -359,14 +369,15 @@ function EditModal({ campaign, onClose, onSaved }: EditModalProps) {
       if (res.ok) {
         const normalized: Campaign = {
           ...campaign!,
-          id: campaign!.id, // always use the original numeric id — API may return string
+          id: campaign!.id,
           name: data.name ?? name,
           start_date: data.start_date ?? data.startDate ?? startDate,
           end_date: data.end_date ?? data.endDate ?? endDate,
           status: data.status ?? status,
+          token: data.token ?? campaign!.token,
         };
         setIsSuccess(true);
-        onSaved(normalized); // parent updates state + closes modal immediately
+        onSaved(normalized);
       } else {
         setErrorMsg(data.message || "Failed to update campaign.");
       }
@@ -412,12 +423,10 @@ function EditModal({ campaign, onClose, onSaved }: EditModalProps) {
 
             <div style={{ padding: "0 32px 32px", display: "flex", flexDirection: "column", gap: "20px" }}>
               <FormField label="Campaign Name" placeholder="Enter campaign name" value={name} onChange={setName} />
-
               <div style={{ display: "flex", gap: "16px" }}>
                 <FormField label="Start Date" placeholder="" isDate value={startDate} onChange={setStartDate} />
                 <FormField label="End Date" placeholder="" isDate value={endDate} onChange={setEndDate} />
               </div>
-
               <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
                 <label style={{ fontSize: "12px", fontWeight: 600, color: C.textLabel }}>Status</label>
                 <select
@@ -499,6 +508,7 @@ function CreateModal({ isOpen, onClose, onCreated }: CreateModalProps) {
           end_date: data.end_date ?? data.endDate ?? endDate,
           status: data.status ?? "draft",
           created_at: data.created_at,
+          token: data.token,
         };
         setTimeout(() => { onCreated(normalized); reset(); onClose(); }, 1400);
       } else {
@@ -546,7 +556,6 @@ function CreateModal({ isOpen, onClose, onCreated }: CreateModalProps) {
 
             <div style={{ padding: "0 32px 32px", display: "flex", flexDirection: "column", gap: "24px" }}>
               <FormField label="Campaign Name" placeholder="Enter campaign name" value={campaignName} onChange={setCampaignName} />
-
               <div style={{ display: "flex", gap: "16px" }}>
                 <FormField label="Start Date" placeholder="" isDate value={startDate} onChange={setStartDate} />
                 <FormField label="End Date" placeholder="" isDate value={endDate} onChange={setEndDate} />
@@ -658,9 +667,7 @@ export default function CampaignsPage() {
   const [deleteTarget, setDeleteTarget] = useState<Campaign | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
-  // Per-row action loading (activate / deactivate)
   const [actionLoading, setActionLoading] = useState<Record<number, string>>({});
-
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" | "info" } | null>(null);
 
   const showToast = (message: string, type: "success" | "error" | "info" = "success") => {
@@ -845,7 +852,6 @@ export default function CampaignsPage() {
                 </div>
               </div>
 
-              {/* Loading State */}
               {isLoading && (
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "12px", padding: "60px 40px", color: C.textMuted, fontSize: "15px" }}>
                   <Spinner size={22} color={C.red} />
@@ -853,7 +859,6 @@ export default function CampaignsPage() {
                 </div>
               )}
 
-              {/* Error State */}
               {!isLoading && loadError && (
                 <div style={{ padding: "40px", textAlign: "center" }}>
                   <p style={{ color: C.red, fontSize: "14px", marginBottom: "16px" }}>{loadError}</p>
@@ -867,14 +872,12 @@ export default function CampaignsPage() {
                 </div>
               )}
 
-              {/* Empty State */}
               {!isLoading && !loadError && filtered.length === 0 && (
                 search
                   ? <div style={{ padding: "60px", textAlign: "center", color: C.textMuted }}>No campaigns match "{search}".</div>
                   : <EmptyState onCreateClick={() => setCreateOpen(true)} />
               )}
 
-              {/* Table */}
               {!isLoading && !loadError && filtered.length > 0 && (
                 <div className="table-container">
                   <div className="table-min-width">
@@ -920,17 +923,13 @@ export default function CampaignsPage() {
                             {/* Status */}
                             <div><StatusBadge status={camp.status} /></div>
 
-                            {/* Link */}
+                            {/* Link — shown for active campaigns only */}
                             <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                              {isActive && <CopyLinkButton campaignId={camp.id} />}
-                              {!isActive && (
-                                <span style={{ fontSize: "12px", color: C.textHint, fontStyle: "italic" }}>—</span>
-                              )}
+                              <CopyLinkButton campaign={camp} />
                             </div>
 
                             {/* Actions */}
                             <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
-                              {/* Edit */}
                               <motion.button
                                 onClick={() => setEditTarget(camp)}
                                 whileHover={{ scale: 1.1, color: C.red }}
@@ -941,7 +940,6 @@ export default function CampaignsPage() {
                                 <Edit2 size={17} />
                               </motion.button>
 
-                              {/* Activate / Deactivate */}
                               <motion.button
                                 onClick={() => handleToggleStatus(camp)}
                                 disabled={!!rowActionLoading}
@@ -961,7 +959,6 @@ export default function CampaignsPage() {
                                 }
                               </motion.button>
 
-                              {/* Delete */}
                               <motion.button
                                 onClick={() => setDeleteTarget(camp)}
                                 whileHover={{ scale: 1.1, color: C.redBright }}
@@ -986,12 +983,10 @@ export default function CampaignsPage() {
         </div>
       </div>
 
-      {/* ── Modals ── */}
       <CreateModal isOpen={isCreateOpen} onClose={() => setCreateOpen(false)} onCreated={handleCreated} />
       {editTarget && <EditModal campaign={editTarget} onClose={() => setEditTarget(null)} onSaved={handleUpdated} />}
       <DeleteModal campaign={deleteTarget} onConfirm={handleDeleteConfirm} onCancel={() => setDeleteTarget(null)} isDeleting={isDeleting} />
 
-      {/* ── Toast ── */}
       <AnimatePresence>
         {toast && <Toast message={toast.message} type={toast.type} onDone={() => setToast(null)} />}
       </AnimatePresence>
