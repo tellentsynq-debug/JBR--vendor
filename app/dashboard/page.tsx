@@ -76,40 +76,6 @@ const GLOBAL_CSS = `
   }
 `;
 
-/* ─── MOCK DATA ──────────────────────────────────────────────── */
-const STATS_DATA = [
-  { label: "Total Candidates", value: "1744", sub: "1744 registered", icon: Users, href: "/employees" },
-  { label: "Active Campaigns", value: "1", sub: "1 running", icon: Calendar, href: "/campaigns" },
-  { label: "Verified Candidates", value: "403", sub: "403 verified", icon: BadgeCheck, href: "/employees?status=verified" },
-  { label: "License Expiring", value: "0", sub: "This month", icon: AlertTriangle, alert: true, href: "/employees?filter=license-expiring" },
-  { label: "Conversion Rate", value: "23%", sub: "23% verified", icon: TrendingUp, href: "/master-report" },
-];
-
-const RECENT_ACTIVITY = [
-  { name: "Bhavna Patel", role: "General Labour", time: "8 hours ago", initials: "BP" },
-  { name: "Kamaljeet Singh", role: "Machine operator", time: "11 hours ago", initials: "KS" },
-  { name: "Navdeep Kaur Kaur", role: "Warehouse Associate", time: "13 hours ago", initials: "NK" },
-  { name: "Atinderjeet Kaur", role: "General Labour", time: "14 hours ago", initials: "AK" },
-];
-
-const JOB_CATEGORIES = [
-  { name: "General Labour", total: 380, verified: 170 },
-  { name: "Warehouse Assoc...", total: 195, verified: 45 },
-  { name: "Customer Servic...", total: 140, verified: 25 },
-  { name: "Office Admin An...", total: 70, verified: 20 },
-  { name: "Security guards", total: 55, verified: 18 },
-  { name: "Forklift Operat...", total: 35, verified: 15 },
-  { name: "Personal Suppor...", total: 20, verified: 10 },
-  { name: "Book Keeper", total: 15, verified: 5 },
-];
-
-const CAMPAIGN_STATS = {
-  active: parseInt(STATS_DATA[1].value), 
-  inactive: 3, 
-  ended: 1
-};
-const totalCampaigns = CAMPAIGN_STATS.active + CAMPAIGN_STATS.inactive + CAMPAIGN_STATS.ended;
-
 /* ─── ANIMATION VARIANTS ─────────────────────────────────────── */
 const easeOutCirc = [0.0, 0.55, 0.45, 1];
 const spring = { type: "spring", stiffness: 200, damping: 20 };
@@ -144,7 +110,7 @@ function TopNav({ activeTabLabel }: { activeTabLabel: string }) {
   const handleSignOut = () => {
     localStorage.removeItem("jbr_token");
     localStorage.removeItem("jbr_user");
-    router.push("/"); // Ensure this points to your login/auth route
+    router.push("/"); 
   };
 
   return (
@@ -183,7 +149,7 @@ function TopNav({ activeTabLabel }: { activeTabLabel: string }) {
   );
 }
 
-function StatCard({ data }: { data: typeof STATS_DATA[0] }) {
+function StatCard({ data }: { data: any }) {
   const router = useRouter();
   const Icon = data.icon;
   const isAlert = 'alert' in data && data.alert;
@@ -228,13 +194,14 @@ function StatCard({ data }: { data: typeof STATS_DATA[0] }) {
   );
 }
 
-function CampaignDonutChart() {
+function CampaignDonutChart({ campaignStats }: { campaignStats: any }) {
   const size = 200; 
   const strokeWidth = 32; 
   const radius = (size - strokeWidth) / 2; 
   const circumference = radius * 2 * Math.PI;
   
-  const activePercentage = totalCampaigns > 0 ? (CAMPAIGN_STATS.active / totalCampaigns) : 0;
+  const totalCampaigns = campaignStats.active + campaignStats.inactive + campaignStats.ended;
+  const activePercentage = totalCampaigns > 0 ? (campaignStats.active / totalCampaigns) : 0;
   const activeOffset = circumference - (activePercentage * circumference);
 
   return (
@@ -253,16 +220,16 @@ function CampaignDonutChart() {
         </svg>
         <div style={{ position: "absolute", textAlign: "center" }}>
           <motion.div initial={{ scale: 0.5, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ delay: 0.9, ...spring }} style={{ fontFamily: "'DM Sans', sans-serif", fontSize: "34px", fontWeight: 700, color: C.textHeading }}>
-            {CAMPAIGN_STATS.active}
+            {campaignStats.active}
           </motion.div>
           <div style={{ fontSize: "10px", textTransform: "uppercase", letterSpacing: "1px", color: C.red, fontWeight: 700 }}>Active</div>
         </div>
       </div>
       <div style={{ display: "flex", justifyContent: "center", gap: "20px", marginTop: "28px" }}>
         {[
-          { label: "Active", color: C.redBright, count: CAMPAIGN_STATS.active },
-          { label: "Inactive", color: "#D1D5DB", count: CAMPAIGN_STATS.inactive },
-          { label: "Ended", color: "#E5E7EB", count: CAMPAIGN_STATS.ended }
+          { label: "Active", color: C.redBright, count: campaignStats.active },
+          { label: "Inactive", color: "#D1D5DB", count: campaignStats.inactive },
+          { label: "Ended", color: "#E5E7EB", count: campaignStats.ended }
         ].map(item => (
           <div key={item.label} style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "12px", color: C.textLabel }}>
             <span style={{ width: "10px", height: "10px", borderRadius: "50%", background: item.color }} />
@@ -275,13 +242,13 @@ function CampaignDonutChart() {
   );
 }
 
-function RecentActivity() {
+function RecentActivity({ activities }: { activities: any[] }) {
   return (
     <motion.div variants={itemVars} className="clean-card" style={{ padding: "28px", flex: "1 1 340px", display: "flex", flexDirection: "column" }}>
       <h3 style={{ fontSize: "15px", fontWeight: 600, marginBottom: "20px", letterSpacing: "0.3px", color: C.textHeading }}>Recent Activity</h3>
       <motion.div variants={containerVars} initial="hidden" animate="show" style={{ display: "flex", flexDirection: "column" }}>
-        {RECENT_ACTIVITY.map((act, i) => (
-          <motion.div key={i} variants={itemVars} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 0", borderBottom: i !== RECENT_ACTIVITY.length - 1 ? `1px solid ${C.border}` : "none" }}>
+        {activities.map((act, i) => (
+          <motion.div key={i} variants={itemVars} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 0", borderBottom: i !== activities.length - 1 ? `1px solid ${C.border}` : "none" }}>
             <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
               <div style={{ width: "34px", height: "34px", borderRadius: "50%", background: C.inputBg, border: `1px solid ${C.border}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "11px", fontWeight: 700, color: C.textLabel, letterSpacing: "0.5px", flexShrink: 0 }}>
                 {act.initials}
@@ -296,7 +263,7 @@ function RecentActivity() {
               </div>
             </div>
             <div style={{ padding: "4px 10px", borderRadius: "20px", background: C.pendingBg, border: `1px solid ${C.pendingBorder}`, color: C.pendingText, fontSize: "10px", textTransform: "uppercase", letterSpacing: "1px", fontWeight: 700, flexShrink: 0, marginLeft: "12px" }}>
-              Pending
+              {act.status || "Pending"}
             </div>
           </motion.div>
         ))}
@@ -305,9 +272,9 @@ function RecentActivity() {
   );
 }
 
-function CustomBarChart({ title, type }: { title: string, type: "total" | "verified" }) {
+function CustomBarChart({ title, type, data }: { title: string, type: "total" | "verified", data: any[] }) {
   const isTotal = type === "total";
-  const maxVal = isTotal ? 380 : 180;
+  const maxVal = data.length > 0 ? Math.max(...data.map((c: any) => isTotal ? c.total : c.verified)) : 100;
   const barColor = isTotal ? C.red : C.successText;
 
   return (
@@ -317,14 +284,14 @@ function CustomBarChart({ title, type }: { title: string, type: "total" | "verif
         <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", justifyContent: "space-between", pointerEvents: "none" }}>
           {[1, 0.75, 0.5, 0.25, 0].map((step, i) => (
             <div key={i} style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-              <span style={{ fontSize: "10px", width: "24px", textAlign: "right", color: C.textHint, fontWeight: 600 }}>{Math.round(maxVal * step)}</span>
+              <span style={{ fontSize: "10px", width: "24px", textAlign: "right", color: C.textHint, fontWeight: 600 }}>{Math.round((maxVal === 0 ? 100 : maxVal) * step)}</span>
               <div style={{ flex: 1, height: "1px", background: i === 4 ? C.borderHover : C.border }} />
             </div>
           ))}
         </div>
         <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-around", flex: 1, paddingLeft: "40px", position: "relative", zIndex: 1 }}>
-          {JOB_CATEGORIES.map((cat, i) => {
-            const heightPct = ((isTotal ? cat.total : cat.verified) / maxVal) * 100;
+          {data.map((cat, i) => {
+            const heightPct = maxVal > 0 ? ((isTotal ? cat.total : cat.verified) / maxVal) * 100 : 0;
             return (
               <div key={i} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "10px", width: "36px" }}>
                 <motion.div 
@@ -335,7 +302,9 @@ function CustomBarChart({ title, type }: { title: string, type: "total" | "verif
                   style={{ width: "100%", background: barColor, borderRadius: "4px 4px 0 0", minHeight: heightPct > 0 ? "4px" : 0 }}
                   title={`${cat.name}: ${isTotal ? cat.total : cat.verified}`}
                 />
-                <span style={{ fontSize: "10px", color: C.textHint, transform: "rotate(-45deg)", transformOrigin: "top left", whiteSpace: "nowrap", marginTop: "6px", width: "20px", fontWeight: 600 }}>{cat.name}</span>
+                <span style={{ fontSize: "10px", color: C.textHint, transform: "rotate(-45deg)", transformOrigin: "top left", whiteSpace: "nowrap", marginTop: "6px", width: "20px", fontWeight: 600 }}>
+                  {cat.name.length > 15 ? cat.name.substring(0, 15) + "..." : cat.name}
+                </span>
               </div>
             );
           })}
@@ -391,6 +360,77 @@ export default function JBRLayout() {
 
   const activeTabLabel = "Dashboard"; 
 
+  // Direct API Data States
+  const [summaryData, setSummaryData] = useState<any>({});
+  const [dashboardData, setDashboardData] = useState<any>({});
+
+  useEffect(() => {
+    const fetchDashboardData = async () => {
+      try {
+        const token = localStorage.getItem("jbr_token") || "";
+        const headers = {
+          "Authorization": `Bearer ${token}`,
+          "Content-Type": "application/json"
+        };
+        
+        // BASE URL DIRECTLY HARDCODED HERE
+        const baseUrl = "https://jbrstaffingsolutions.com";
+
+        const [summaryRes, dashboardRes] = await Promise.all([
+          fetch(`${baseUrl}/api/dashboard/summary`, { headers }),
+          fetch(`${baseUrl}/api/dashboard`, { headers })
+        ]);
+
+        if (summaryRes.ok && dashboardRes.ok) {
+          const summaryJson = await summaryRes.json();
+          const dashboardJson = await dashboardRes.json();
+
+          setSummaryData(summaryJson.summary || {});
+          setDashboardData(dashboardJson || {});
+        } else {
+          console.error("API response was not OK", summaryRes.status, dashboardRes.status);
+        }
+      } catch (error) {
+        console.error("Error fetching data:", error);
+      }
+    };
+
+    fetchDashboardData();
+  }, []);
+
+  // Map API directly to components
+  const statsData = [
+    { label: "Total Candidates", value: summaryData?.totalCandidates?.toString() || "0", sub: `${summaryData?.totalCandidates || 0} registered`, icon: Users, href: "/employees" },
+    { label: "Active Campaigns", value: summaryData?.activeCampaigns?.toString() || "0", sub: `${summaryData?.activeCampaigns || 0} running`, icon: Calendar, href: "/campaigns" },
+    { label: "Verified Candidates", value: summaryData?.verifiedCandidates?.toString() || "0", sub: `${summaryData?.verifiedCandidates || 0} verified`, icon: BadgeCheck, href: "/employees?status=verified" },
+    { label: "License Expiring", value: summaryData?.licenseExpiring?.toString() || "0", sub: "This month", icon: AlertTriangle, alert: (summaryData?.licenseExpiring || 0) > 0, href: "/employees?filter=license-expiring" },
+    { label: "Conversion Rate", value: summaryData?.conversionRate || "0%", sub: "Registered to verified", icon: TrendingUp, href: "/master-report" },
+  ];
+
+  const campaignStats = {
+    active: summaryData?.activeCampaigns || 0,
+    inactive: 0,
+    ended: 0
+  };
+
+  const recentActivities = dashboardData?.charts?.recentActivity?.map((act: any) => {
+    const name = act.message.replace(/ registered/i, "");
+    const initials = name.split(" ").slice(0, 2).map((n: string) => n[0]).join("").toUpperCase();
+    return {
+      name: name,
+      role: act.jobCategory,
+      time: act.timeAgo,
+      initials: initials || "U",
+      status: act.status
+    };
+  }) || [];
+
+  const jobCategories = dashboardData?.charts?.candidatesByJob?.map((job: any) => ({
+    name: job.category,
+    total: job.count || 0,
+    verified: job.verifiedCount || 0 
+  })) || [];
+
   return (
     <>
       <style>{GLOBAL_CSS}</style>
@@ -440,29 +480,29 @@ export default function JBRLayout() {
                         gap: "16px" 
                       }}
                     >
-                      {STATS_DATA.map((stat, i) => <StatCard key={i} data={stat} />)}
+                      {statsData.map((stat, i) => <StatCard key={i} data={stat} />)}
                     </motion.div>
                   </div>
 
                   {/* Charts Row */}
                   <motion.div variants={containerVars} initial="hidden" animate="show" style={{ display: "flex", flexWrap: "wrap", gap: "20px" }}>
-                    <CampaignDonutChart />
-                    <RecentActivity />
+                    <CampaignDonutChart campaignStats={campaignStats} />
+                    <RecentActivity activities={recentActivities} />
                   </motion.div>
 
                   {/* Bar Charts */}
                   <motion.div variants={containerVars} initial="hidden" whileInView="show" viewport={{ once: true, margin: "-80px" }} style={{ display: "flex", flexWrap: "wrap", gap: "20px" }}>
-                    <CustomBarChart title="Total Candidates by Job Category" type="total" />
-                    <CustomBarChart title="Verified Candidates by Job Category" type="verified" />
+                    <CustomBarChart title="Total Candidates by Job Category" type="total" data={jobCategories} />
+                    <CustomBarChart title="Verified Candidates by Job Category" type="verified" data={jobCategories} />
                   </motion.div>
 
                   {/* Quick Actions */}
                   <motion.div variants={containerVars} initial="hidden" whileInView="show" viewport={{ once: true }} style={{ paddingBottom: "32px" }}>
                     <motion.h3 variants={itemVars} style={{ fontSize: "15px", fontWeight: 600, marginBottom: "16px", color: C.textHeading }}>Quick Actions</motion.h3>
                     <div style={{ display: "flex", flexWrap: "wrap", gap: "16px" }}>
-                      <ActionCard title="Create Campaign" sub="Manage 1 campaigns" type="primary" icon={Plus} href="/campaigns" />
-                      <ActionCard title="View Employees" sub="1744 registered" type="secondary" icon={Users} href="/employees" />
-                      <ActionCard title="Generate Report" sub="3 available reports" type="tertiary" icon={FileText} href="/master-report" />
+                      <ActionCard title="Create Campaign" sub={`Manage ${summaryData?.activeCampaigns || 0} campaigns`} type="primary" icon={Plus} href="/campaigns" />
+                      <ActionCard title="View Employees" sub={`${summaryData?.totalCandidates || 0} registered`} type="secondary" icon={Users} href="/employees" />
+                      <ActionCard title="Generate Report" sub="Available reports" type="tertiary" icon={FileText} href="/master-report" />
                     </div>
                   </motion.div>
                 </motion.div>

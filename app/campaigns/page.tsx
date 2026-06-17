@@ -64,10 +64,11 @@ interface Campaign {
   name: string;
   start_date: string;
   end_date: string;
-  status: string;
+  is_active: boolean;
+  link_token?: string;
+  created_by?: string;
   created_at?: string;
-  link?: string;
-  token?: string; 
+  updated_at?: string;
 }
 
 /* ─── HELPERS ────────────────────────────────────────────────── */
@@ -94,12 +95,8 @@ function toInputDate(iso: string): string {
   return iso.split("T")[0];
 }
 
-/**
- * Generates the candidate-facing registration link for a campaign.
- * Dynamically uses the current origin (e.g., localhost or production domain).
- */
 function getCampaignLink(camp: Campaign): string {
-  const tokenValue = camp.token ?? camp.link ?? String(camp.id);
+  const tokenValue = camp.link_token ?? String(camp.id);
   const baseUrl = typeof window !== "undefined" ? window.location.origin : "";
   return `${baseUrl}/employee-register?token=${tokenValue}`;
 }
@@ -235,32 +232,17 @@ function FormField({ label, placeholder, isDate = false, value, onChange }: Form
 }
 
 /* ─── STATUS BADGE ───────────────────────────────────────────── */
-function StatusBadge({ status }: { status: string }) {
-  const s = status?.toLowerCase();
-  if (s === "active") {
+function StatusBadge({ isActive }: { isActive: boolean }) {
+  if (isActive) {
     return (
       <div style={{ display: "inline-flex", alignItems: "center", gap: "6px", padding: "6px 12px", borderRadius: "20px", background: C.successBg, color: C.successText, fontSize: "11px", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.5px" }}>
         <div style={{ width: "6px", height: "6px", borderRadius: "50%", background: C.successText }} /> Active
       </div>
     );
   }
-  if (s === "inactive") {
-    return (
-      <div style={{ display: "inline-flex", alignItems: "center", padding: "6px 12px", borderRadius: "20px", background: C.inactiveBg, color: C.inactiveText, fontSize: "11px", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.5px" }}>
-        Inactive
-      </div>
-    );
-  }
-  if (s === "draft") {
-    return (
-      <div style={{ display: "inline-flex", alignItems: "center", padding: "6px 12px", borderRadius: "20px", background: C.pendingBg, border: `1px solid ${C.pendingBorder}`, color: C.pendingText, fontSize: "11px", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.5px" }}>
-        Draft
-      </div>
-    );
-  }
   return (
-    <div style={{ display: "inline-flex", alignItems: "center", padding: "6px 12px", borderRadius: "20px", background: C.alertBg, color: C.alertText, fontSize: "11px", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.5px" }}>
-      {status || "Unknown"}
+    <div style={{ display: "inline-flex", alignItems: "center", padding: "6px 12px", borderRadius: "20px", background: C.inactiveBg, color: C.inactiveText, fontSize: "11px", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.5px" }}>
+      Inactive
     </div>
   );
 }
@@ -348,13 +330,13 @@ interface EditModalProps {
   onSaved: (updated: Campaign) => void;
 }
 function EditModal({ campaign, onClose, onSaved }: EditModalProps) {
-  const [name, setName] = useState(campaign?.name ?? "");
+  const [name, setName]           = useState(campaign?.name ?? "");
   const [startDate, setStartDate] = useState(toInputDate(campaign?.start_date ?? ""));
-  const [endDate, setEndDate] = useState(toInputDate(campaign?.end_date ?? ""));
-  const [status, setStatus] = useState(campaign?.status ?? "active");
+  const [endDate, setEndDate]     = useState(toInputDate(campaign?.end_date ?? ""));
+  const [isActive, setIsActive]   = useState(campaign?.is_active ?? true);
   const [isLoading, setIsLoading] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
-  const [errorMsg, setErrorMsg] = useState("");
+  const [errorMsg, setErrorMsg]   = useState("");
 
   const handleSave = async () => {
     if (!name || !startDate || !endDate) { setErrorMsg("Please fill in all fields."); return; }
@@ -363,21 +345,26 @@ function EditModal({ campaign, onClose, onSaved }: EditModalProps) {
       const res = await fetch(`https://jbrstaffingsolutions.com/api/campaigns/${campaign!.id}`, {
         method: "PUT",
         headers: authHeaders(true),
-        body: JSON.stringify({ name, startDate, endDate, status }),
+        body: JSON.stringify({
+          name,
+          start_date: startDate,
+          end_date:   endDate,
+          is_active:  isActive,
+        }),
       });
       const data = await res.json();
       if (res.ok) {
-        const normalized: Campaign = {
+        const updated: Campaign = {
           ...campaign!,
-          id: campaign!.id,
-          name: data.name ?? name,
-          start_date: data.start_date ?? data.startDate ?? startDate,
-          end_date: data.end_date ?? data.endDate ?? endDate,
-          status: data.status ?? status,
-          token: data.token ?? campaign!.token,
+          name:       data.name       ?? name,
+          start_date: data.start_date ?? startDate,
+          end_date:   data.end_date   ?? endDate,
+          is_active:  data.is_active  ?? isActive,
+          link_token: data.link_token ?? campaign!.link_token,
+          updated_at: data.updated_at,
         };
         setIsSuccess(true);
-        onSaved(normalized);
+        setTimeout(() => onSaved(updated), 900);
       } else {
         setErrorMsg(data.message || "Failed to update campaign.");
       }
@@ -425,22 +412,30 @@ function EditModal({ campaign, onClose, onSaved }: EditModalProps) {
               <FormField label="Campaign Name" placeholder="Enter campaign name" value={name} onChange={setName} />
               <div style={{ display: "flex", gap: "16px" }}>
                 <FormField label="Start Date" placeholder="" isDate value={startDate} onChange={setStartDate} />
-                <FormField label="End Date" placeholder="" isDate value={endDate} onChange={setEndDate} />
+                <FormField label="End Date"   placeholder="" isDate value={endDate}   onChange={setEndDate}   />
               </div>
+
+              {/* Active toggle */}
               <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
                 <label style={{ fontSize: "12px", fontWeight: 600, color: C.textLabel }}>Status</label>
-                <select
-                  value={status}
-                  onChange={(e) => setStatus(e.target.value)}
-                  style={{
-                    padding: "12px 16px", background: C.inputBg, border: `1px solid ${C.border}`,
-                    borderRadius: "8px", color: C.textBody, fontSize: "14px", outline: "none", cursor: "pointer"
-                  }}
-                >
-                  <option value="active">Active</option>
-                  <option value="inactive">Inactive</option>
-                  <option value="draft">Draft</option>
-                </select>
+                <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                  <div
+                    onClick={() => setIsActive(a => !a)}
+                    style={{
+                      width: "44px", height: "24px", borderRadius: "12px",
+                      background: isActive ? C.successText : C.borderHover,
+                      position: "relative", cursor: "pointer", transition: "background 0.3s ease", flexShrink: 0
+                    }}
+                  >
+                    <motion.div
+                      layout initial={false} animate={{ x: isActive ? 22 : 2 }}
+                      style={{ width: "20px", height: "20px", borderRadius: "50%", background: C.white, position: "absolute", top: "2px", boxShadow: "0 1px 3px rgba(0,0,0,0.2)" }}
+                    />
+                  </div>
+                  <span style={{ fontSize: "14px", color: C.textBody, fontWeight: 500 }}>
+                    {isActive ? "Active" : "Inactive"}
+                  </span>
+                </div>
               </div>
 
               {errorMsg && <div style={{ color: C.red, fontSize: "13px", fontWeight: 500 }}>{errorMsg}</div>}
@@ -481,11 +476,11 @@ interface CreateModalProps {
 }
 function CreateModal({ isOpen, onClose, onCreated }: CreateModalProps) {
   const [campaignName, setCampaignName] = useState("");
-  const [startDate, setStartDate] = useState("");
-  const [endDate, setEndDate] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
-  const [isSuccess, setIsSuccess] = useState(false);
-  const [errorMsg, setErrorMsg] = useState("");
+  const [startDate, setStartDate]       = useState("");
+  const [endDate, setEndDate]           = useState("");
+  const [isLoading, setIsLoading]       = useState(false);
+  const [isSuccess, setIsSuccess]       = useState(false);
+  const [errorMsg, setErrorMsg]         = useState("");
 
   const reset = () => { setCampaignName(""); setStartDate(""); setEndDate(""); setIsSuccess(false); setErrorMsg(""); };
 
@@ -496,19 +491,21 @@ function CreateModal({ isOpen, onClose, onCreated }: CreateModalProps) {
       const res = await fetch("https://jbrstaffingsolutions.com/api/campaigns", {
         method: "POST",
         headers: authHeaders(true),
-        body: JSON.stringify({ name: campaignName, startDate, endDate }),
+        body: JSON.stringify({ name: campaignName, start_date: startDate, end_date: endDate }),
       });
       const data = await res.json();
       if (res.ok) {
         setIsSuccess(true);
         const normalized: Campaign = {
-          id: data.id,
-          name: data.name ?? campaignName,
-          start_date: data.start_date ?? data.startDate ?? startDate,
-          end_date: data.end_date ?? data.endDate ?? endDate,
-          status: data.status ?? "draft",
+          id:         data.id,
+          name:       data.name       ?? campaignName,
+          start_date: data.start_date ?? startDate,
+          end_date:   data.end_date   ?? endDate,
+          is_active:  data.is_active  ?? true,
+          link_token: data.link_token,
           created_at: data.created_at,
-          token: data.token,
+          updated_at: data.updated_at,
+          created_by: data.created_by,
         };
         setTimeout(() => { onCreated(normalized); reset(); onClose(); }, 1400);
       } else {
@@ -558,7 +555,7 @@ function CreateModal({ isOpen, onClose, onCreated }: CreateModalProps) {
               <FormField label="Campaign Name" placeholder="Enter campaign name" value={campaignName} onChange={setCampaignName} />
               <div style={{ display: "flex", gap: "16px" }}>
                 <FormField label="Start Date" placeholder="" isDate value={startDate} onChange={setStartDate} />
-                <FormField label="End Date" placeholder="" isDate value={endDate} onChange={setEndDate} />
+                <FormField label="End Date"   placeholder="" isDate value={endDate}   onChange={setEndDate}   />
               </div>
 
               {errorMsg && <div style={{ color: C.red, fontSize: "13px", fontWeight: 500, marginTop: "-8px" }}>{errorMsg}</div>}
@@ -657,22 +654,21 @@ export default function CampaignsPage() {
   const [isSidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [activeTab, setActiveTab] = useState("campaigns");
 
-  const [campaigns, setCampaigns] = useState<Campaign[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [loadError, setLoadError] = useState("");
-  const [search, setSearch] = useState("");
+  const [campaigns, setCampaigns]   = useState<Campaign[]>([]);
+  const [isLoading, setIsLoading]   = useState(true);
+  const [loadError, setLoadError]   = useState("");
+  const [search, setSearch]         = useState("");
 
-  const [isCreateOpen, setCreateOpen] = useState(false);
-  const [editTarget, setEditTarget] = useState<Campaign | null>(null);
+  const [isCreateOpen, setCreateOpen]   = useState(false);
+  const [editTarget, setEditTarget]     = useState<Campaign | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Campaign | null>(null);
-  const [isDeleting, setIsDeleting] = useState(false);
+  const [isDeleting, setIsDeleting]     = useState(false);
 
-  const [actionLoading, setActionLoading] = useState<Record<number, string>>({});
+  const [actionLoading, setActionLoading] = useState<Record<number, boolean>>({});
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" | "info" } | null>(null);
 
-  const showToast = (message: string, type: "success" | "error" | "info" = "success") => {
+  const showToast = (message: string, type: "success" | "error" | "info" = "success") =>
     setToast({ message, type });
-  };
 
   /* ── Fetch campaigns ── */
   const fetchCampaigns = useCallback(async () => {
@@ -717,24 +713,29 @@ export default function CampaignsPage() {
     }
   };
 
-  /* ── Toggle activate / deactivate ── */
+/* ─── Toggle active / inactive via PATCH with action endpoints ── */
   const handleToggleStatus = async (camp: Campaign) => {
-    const isActive = camp.status?.toLowerCase() === "active";
-    const action = isActive ? "deactivate" : "activate";
-    setActionLoading((prev) => ({ ...prev, [camp.id]: action }));
+    setActionLoading((prev) => ({ ...prev, [camp.id]: true }));
+    const newActiveState = !camp.is_active;
+    const action = newActiveState ? "activate" : "deactivate";
+    
     try {
       const res = await fetch(`https://jbrstaffingsolutions.com/api/campaigns/${camp.id}/${action}`, {
         method: "PATCH",
-        headers: authHeaders(),
+        headers: authHeaders(), // No need for true (Content-Type) since there's no body
       });
       const data = await res.json().catch(() => ({}));
       if (res.ok) {
         setCampaigns((prev) =>
-          prev.map((c) => c.id === camp.id ? { ...c, status: data.status ?? (isActive ? "inactive" : "active") } : c)
+          prev.map((c) =>
+            c.id === camp.id
+              ? { ...c, is_active: data.is_active ?? newActiveState }
+              : c
+          )
         );
-        showToast(`Campaign ${action}d successfully.`);
+        showToast(`Campaign ${newActiveState ? "activated" : "deactivated"} successfully.`);
       } else {
-        showToast(data.error || data.message || `Failed to ${action} campaign.`, "error");
+        showToast(data.message || "Failed to update campaign status.", "error");
       }
     } catch {
       showToast("A network error occurred.", "error");
@@ -854,8 +855,7 @@ export default function CampaignsPage() {
 
               {isLoading && (
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "12px", padding: "60px 40px", color: C.textMuted, fontSize: "15px" }}>
-                  <Spinner size={22} color={C.red} />
-                  Loading campaigns…
+                  <Spinner size={22} color={C.red} /> Loading campaigns…
                 </div>
               )}
 
@@ -894,8 +894,7 @@ export default function CampaignsPage() {
                     {/* Data Rows */}
                     <div style={{ display: "flex", flexDirection: "column" }}>
                       {filtered.map((camp, idx) => {
-                        const rowActionLoading = actionLoading[camp.id];
-                        const isActive = camp.status?.toLowerCase() === "active";
+                        const isToggling = !!actionLoading[camp.id];
 
                         return (
                           <motion.div
@@ -920,16 +919,17 @@ export default function CampaignsPage() {
                             {/* End Date */}
                             <div style={{ fontSize: "14px", color: C.textMuted }}>{formatDate(camp.end_date)}</div>
 
-                            {/* Status */}
-                            <div><StatusBadge status={camp.status} /></div>
+                            {/* Status — uses is_active boolean */}
+                            <div><StatusBadge isActive={camp.is_active} /></div>
 
-                            {/* Link — shown for active campaigns only */}
-                            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                            {/* Copy Link */}
+                            <div>
                               <CopyLinkButton campaign={camp} />
                             </div>
 
                             {/* Actions */}
                             <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
+                              {/* Edit */}
                               <motion.button
                                 onClick={() => setEditTarget(camp)}
                                 whileHover={{ scale: 1.1, color: C.red }}
@@ -940,25 +940,27 @@ export default function CampaignsPage() {
                                 <Edit2 size={17} />
                               </motion.button>
 
+                              {/* Toggle active/inactive */}
                               <motion.button
                                 onClick={() => handleToggleStatus(camp)}
-                                disabled={!!rowActionLoading}
-                                whileHover={rowActionLoading ? {} : { scale: 1.1, color: isActive ? C.redBright : C.successText }}
+                                disabled={isToggling}
+                                whileHover={isToggling ? {} : { scale: 1.1, color: camp.is_active ? C.redBright : C.successText }}
                                 whileTap={{ scale: 0.9 }}
-                                title={isActive ? "Deactivate" : "Activate"}
+                                title={camp.is_active ? "Deactivate" : "Activate"}
                                 style={{
                                   background: "transparent", border: "none", color: C.textHint,
-                                  cursor: rowActionLoading ? "default" : "pointer", padding: "7px",
+                                  cursor: isToggling ? "default" : "pointer", padding: "7px",
                                   transition: "color 0.2s", borderRadius: "6px",
-                                  opacity: rowActionLoading ? 0.5 : 1
+                                  opacity: isToggling ? 0.5 : 1
                                 }}
                               >
-                                {rowActionLoading
+                                {isToggling
                                   ? <Spinner size={17} />
-                                  : isActive ? <EyeOff size={17} /> : <Eye size={17} />
+                                  : camp.is_active ? <EyeOff size={17} /> : <Eye size={17} />
                                 }
                               </motion.button>
 
+                              {/* Delete */}
                               <motion.button
                                 onClick={() => setDeleteTarget(camp)}
                                 whileHover={{ scale: 1.1, color: C.redBright }}
@@ -969,6 +971,7 @@ export default function CampaignsPage() {
                                 <Trash2 size={17} />
                               </motion.button>
                             </div>
+
                           </motion.div>
                         );
                       })}
