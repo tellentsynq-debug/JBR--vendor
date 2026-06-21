@@ -1,12 +1,12 @@
 "use client";
 
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   LogOut, Search, ChevronDown, Download, CheckCircle,
   MessageCircle, Users, Trash2, Edit2, ChevronLeft,
   ChevronRight, Square, CheckSquare, Calendar, FileSpreadsheet,
-  X, Save, AlertTriangle, CheckCheck, Loader2, UserPlus
+  X, Save, AlertTriangle, CheckCheck, Loader2, UserPlus, MessageSquare
 } from "lucide-react";
 import * as XLSX from "xlsx";
 
@@ -53,7 +53,7 @@ const GLOBAL_CSS = `
   ::-webkit-scrollbar-thumb:hover { background: rgba(0,0,0,0.25); }
   .clean-card { background: ${C.surface}; border: 1px solid ${C.border}; border-radius: 16px; box-shadow: 0 1px 3px ${C.shadow}, 0 4px 16px ${C.shadow}; }
   .table-container { width: 100%; overflow-x: auto; }
-  .table-min-width { min-width: 1350px; }
+  .table-min-width { min-width: 1400px; }
   select { appearance: none; background-color: transparent; cursor: pointer; }
   select option { background-color: ${C.surface}; color: ${C.textHeading}; }
   .modal-overlay { position: fixed; inset: 0; background: ${C.overlayBg}; z-index: 1000; display: flex; align-items: center; justify-content: center; padding: 24px; backdrop-filter: blur(2px); }
@@ -72,11 +72,13 @@ const GLOBAL_CSS = `
 
 /* ─── API CONFIG ──────────────────────────────────────────────── */
 const BASE_URL = "https://jbrstaffingsolutions.com/api";
-const TOKEN = typeof window !== "undefined" ? localStorage.getItem("jbr_token") || "" : "";
+
+const getAuthToken = () =>
+  typeof window !== "undefined" ? localStorage.getItem("jbr_token") || "" : "";
 
 const authHeaders = () => ({
   "Content-Type": "application/json",
-  Authorization: `Bearer ${TOKEN}`,
+  Authorization: `Bearer ${getAuthToken()}`,
 });
 
 /* ─── TYPES ──────────────────────────────────────────────────── */
@@ -109,17 +111,17 @@ interface Employee {
   campaigns: { id: number; name: string };
 }
 
+interface JobCategory {
+  id: string;
+  name: string;
+  job_industry?: { id: string; name: string } | null;
+}
+
 interface Group {
   id: string | number;
   name: string;
   description?: string;
   member_count?: number;
-}
-
-interface Pagination {
-  limit: number;
-  offset: number;
-  total: number;
 }
 
 interface Toast {
@@ -141,6 +143,44 @@ const getVerificationBadge = (status: string) => {
     case "rejected": return { bg: C.alertBg,    border: "transparent",   color: C.alertText,    label: "Rejected" };
     default:         return { bg: C.inputBg,    border: C.border,        color: C.textMuted,    label: "Unknown"  };
   }
+};
+
+/*
+ * The /groups/{id}/members endpoint (proven to work on the Shortlisted page)
+ * returns rows shaped like { id, candidate_id, assigned_at, candidates: {...} }
+ * instead of flat Employee objects. This normalizes one of those rows into the
+ * Employee shape the rest of this page already knows how to render.
+ */
+const mapGroupMemberToEmployee = (m: any): Employee => {
+  const c = m?.candidates || m || {};
+  return {
+    id: c.id,
+    first_name: c.first_name || "",
+    last_name: c.last_name || "",
+    email: c.email || "",
+    phone_number: c.phone_number || "",
+    gender: c.gender || "",
+    date_of_birth: c.date_of_birth || "",
+    city: c.city || "",
+    province: c.province || "",
+    postal_code: c.postal_code || "",
+    job_category_id: c.job_category_id ?? "",
+    job_industry_id: c.job_industry_id ?? "",
+    campaign_id: c.campaigns?.id ?? c.campaign_id ?? 0,
+    verification_status: c.verification_status || "pending",
+    available_from: c.available_from || "",
+    permit_status: c.permit_status || "",
+    shift_preference: c.shift_preference || "",
+    license_required: !!c.license_required,
+    license_expiry_month: c.license_expiry_month ?? null,
+    license_expiry_year: c.license_expiry_year ?? null,
+    resume_url: c.resume_url || "",
+    created_at: c.created_at || m?.assigned_at || "",
+    updated_at: c.updated_at || "",
+    job_categories: c.job_categories || { id: "", name: "" },
+    job_industries: c.job_industries || { id: "", name: "" },
+    campaigns: c.campaigns || { id: 0, name: "" },
+  };
 };
 
 /* ─── ANIMATION VARIANTS ─────────────────────────────────────── */
@@ -206,17 +246,13 @@ function AssignGroupModal({ selectedIds, onClose, showToast, onSuccess }: Assign
   const [assigning, setAssigning] = useState(false);
   const [searchGroup, setSearchGroup] = useState("");
 
-  // Fetch available groups from API
   useEffect(() => {
     const fetchGroups = async () => {
       setLoadingGroups(true);
       try {
-        const res = await fetch(`${BASE_URL}/groups`, {
-          headers: authHeaders(),
-        });
+        const res = await fetch(`${BASE_URL}/groups`, { headers: authHeaders() });
         if (!res.ok) throw new Error(`Error ${res.status}`);
         const json = await res.json();
-        // Support both { data: [] } and plain array responses
         setGroups(json.data || json.groups || json || []);
       } catch (err: any) {
         showToast({ type: "error", message: err.message || "Failed to load groups." });
@@ -228,9 +264,7 @@ function AssignGroupModal({ selectedIds, onClose, showToast, onSuccess }: Assign
     fetchGroups();
   }, []);
 
-  const filteredGroups = groups.filter(g =>
-    g.name.toLowerCase().includes(searchGroup.toLowerCase())
-  );
+  const filteredGroups = groups.filter(g => g.name.toLowerCase().includes(searchGroup.toLowerCase()));
 
   const handleAssign = async () => {
     if (!selectedGroupId) return;
@@ -263,7 +297,6 @@ function AssignGroupModal({ selectedIds, onClose, showToast, onSuccess }: Assign
         exit={{ scale: 0.92, opacity: 0 }}
         style={{ maxWidth: "500px" }}
       >
-        {/* Header */}
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "24px" }}>
           <div>
             <h2 style={{ fontSize: "22px", fontWeight: 700, color: C.textHeading, fontFamily: "'Cormorant Garamond', serif", display: "flex", alignItems: "center", gap: "10px" }}>
@@ -278,20 +311,13 @@ function AssignGroupModal({ selectedIds, onClose, showToast, onSuccess }: Assign
           </button>
         </div>
 
-        {/* Selected employees count pill */}
-        <div style={{
-          display: "inline-flex", alignItems: "center", gap: "8px",
-          padding: "8px 16px", borderRadius: "8px",
-          background: C.redActiveBg, border: `1px solid ${C.red}`,
-          marginBottom: "20px"
-        }}>
+        <div style={{ display: "inline-flex", alignItems: "center", gap: "8px", padding: "8px 16px", borderRadius: "8px", background: C.redActiveBg, border: `1px solid ${C.red}`, marginBottom: "20px" }}>
           <CheckSquare size={15} color={C.red} />
           <span style={{ fontSize: "13px", fontWeight: 600, color: C.red }}>
             {selectedIds.length} employee{selectedIds.length !== 1 ? "s" : ""} selected
           </span>
         </div>
 
-        {/* Group search */}
         <div style={{ position: "relative", marginBottom: "16px" }}>
           <Search size={15} color={C.textHint} style={{ position: "absolute", left: "12px", top: "50%", transform: "translateY(-50%)" }} />
           <input
@@ -299,18 +325,12 @@ function AssignGroupModal({ selectedIds, onClose, showToast, onSuccess }: Assign
             placeholder="Search groups..."
             value={searchGroup}
             onChange={e => setSearchGroup(e.target.value)}
-            style={{
-              width: "100%", background: C.inputBg, border: `1px solid ${C.border}`,
-              borderRadius: "8px", padding: "10px 16px 10px 38px",
-              color: C.textBody, fontSize: "14px", outline: "none",
-              fontFamily: "'DM Sans', sans-serif"
-            }}
+            style={{ width: "100%", background: C.inputBg, border: `1px solid ${C.border}`, borderRadius: "8px", padding: "10px 16px 10px 38px", color: C.textBody, fontSize: "14px", outline: "none", fontFamily: "'DM Sans', sans-serif" }}
             onFocus={e => (e.target.style.borderColor = C.red)}
             onBlur={e => (e.target.style.borderColor = C.border)}
           />
         </div>
 
-        {/* Groups list */}
         <div style={{ maxHeight: "320px", overflowY: "auto", display: "flex", flexDirection: "column", gap: "8px", marginBottom: "24px" }}>
           {loadingGroups ? (
             <div style={{ padding: "40px", textAlign: "center", color: C.textMuted, display: "flex", alignItems: "center", justifyContent: "center", gap: "10px" }}>
@@ -329,50 +349,18 @@ function AssignGroupModal({ selectedIds, onClose, showToast, onSuccess }: Assign
                   key={group.id}
                   className={`group-item${isSelected ? " selected" : ""}`}
                   onClick={() => setSelectedGroupId(isSelected ? null : group.id)}
-                  style={{
-                    display: "flex", alignItems: "center", gap: "12px",
-                    padding: "14px 16px", borderRadius: "10px", cursor: "pointer",
-                    border: `1px solid ${isSelected ? C.red : C.border}`,
-                    background: isSelected ? C.redActiveBg : C.surface,
-                    transition: "all 0.2s"
-                  }}
+                  style={{ display: "flex", alignItems: "center", gap: "12px", padding: "14px 16px", borderRadius: "10px", cursor: "pointer", border: `1px solid ${isSelected ? C.red : C.border}`, background: isSelected ? C.redActiveBg : C.surface, transition: "all 0.2s" }}
                 >
-                  {/* Radio indicator */}
-                  <div style={{
-                    width: "18px", height: "18px", borderRadius: "50%", flexShrink: 0,
-                    border: `2px solid ${isSelected ? C.red : C.borderHover}`,
-                    background: isSelected ? C.red : "transparent",
-                    display: "flex", alignItems: "center", justifyContent: "center",
-                    transition: "all 0.2s"
-                  }}>
+                  <div style={{ width: "18px", height: "18px", borderRadius: "50%", flexShrink: 0, border: `2px solid ${isSelected ? C.red : C.borderHover}`, background: isSelected ? C.red : "transparent", display: "flex", alignItems: "center", justifyContent: "center", transition: "all 0.2s" }}>
                     {isSelected && <div style={{ width: "6px", height: "6px", borderRadius: "50%", background: "#fff" }} />}
                   </div>
-
-                  {/* Group icon */}
-                  <div style={{
-                    width: "36px", height: "36px", borderRadius: "8px", flexShrink: 0,
-                    background: isSelected ? C.red : C.inputBg,
-                    display: "flex", alignItems: "center", justifyContent: "center",
-                    transition: "all 0.2s"
-                  }}>
+                  <div style={{ width: "36px", height: "36px", borderRadius: "8px", flexShrink: 0, background: isSelected ? C.red : C.inputBg, display: "flex", alignItems: "center", justifyContent: "center", transition: "all 0.2s" }}>
                     <Users size={16} color={isSelected ? "#fff" : C.textMuted} />
                   </div>
-
-                  {/* Group info */}
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: "14px", fontWeight: 600, color: isSelected ? C.red : C.textHeading, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                      {group.name}
-                    </div>
-                    {group.description && (
-                      <div style={{ fontSize: "12px", color: C.textMuted, marginTop: "2px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                        {group.description}
-                      </div>
-                    )}
-                    {group.member_count !== undefined && (
-                      <div style={{ fontSize: "11px", color: C.textHint, marginTop: "2px" }}>
-                        {group.member_count} member{group.member_count !== 1 ? "s" : ""}
-                      </div>
-                    )}
+                    <div style={{ fontSize: "14px", fontWeight: 600, color: isSelected ? C.red : C.textHeading, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{group.name}</div>
+                    {group.description && <div style={{ fontSize: "12px", color: C.textMuted, marginTop: "2px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{group.description}</div>}
+                    {group.member_count !== undefined && <div style={{ fontSize: "11px", color: C.textHint, marginTop: "2px" }}>{group.member_count} member{group.member_count !== 1 ? "s" : ""}</div>}
                   </div>
                 </div>
               );
@@ -380,16 +368,8 @@ function AssignGroupModal({ selectedIds, onClose, showToast, onSuccess }: Assign
           )}
         </div>
 
-        {/* Footer */}
         <div style={{ display: "flex", gap: "12px", justifyContent: "flex-end" }}>
-          <button
-            onClick={onClose}
-            style={{
-              padding: "10px 20px", background: "transparent",
-              border: `1px solid ${C.border}`, borderRadius: "8px",
-              color: C.textLabel, fontSize: "14px", fontWeight: 600, cursor: "pointer"
-            }}
-          >
+          <button onClick={onClose} style={{ padding: "10px 20px", background: "transparent", border: `1px solid ${C.border}`, borderRadius: "8px", color: C.textLabel, fontSize: "14px", fontWeight: 600, cursor: "pointer" }}>
             Cancel
           </button>
           <motion.button
@@ -397,21 +377,8 @@ function AssignGroupModal({ selectedIds, onClose, showToast, onSuccess }: Assign
             whileTap={selectedGroupId ? { scale: 0.98 } : {}}
             onClick={handleAssign}
             disabled={!selectedGroupId || assigning}
-            style={{
-              display: "flex", alignItems: "center", gap: "8px",
-              padding: "10px 24px", background: selectedGroupId ? C.red : C.inputBg,
-              border: "none", borderRadius: "8px",
-              color: selectedGroupId ? "#fff" : C.textHint,
-              fontSize: "14px", fontWeight: 600,
-              cursor: selectedGroupId && !assigning ? "pointer" : "not-allowed",
-              opacity: assigning ? 0.7 : 1,
-              transition: "all 0.2s"
-            }}
-          >
-            {assigning
-              ? <><Loader2 size={16} style={{ animation: "spin 1s linear infinite" }} /> Assigning…</>
-              : <><UserPlus size={16} /> Assign to Group</>
-            }
+            style={{ display: "flex", alignItems: "center", gap: "8px", padding: "10px 24px", background: selectedGroupId ? C.red : C.inputBg, border: "none", borderRadius: "8px", color: selectedGroupId ? "#fff" : C.textHint, fontSize: "14px", fontWeight: 600, cursor: selectedGroupId && !assigning ? "pointer" : "not-allowed", opacity: assigning ? 0.7 : 1, transition: "all 0.2s" }}>
+            {assigning ? <><Loader2 size={16} style={{ animation: "spin 1s linear infinite" }} /> Assigning…</> : <><UserPlus size={16} /> Assign to Group</>}
           </motion.button>
         </div>
       </motion.div>
@@ -667,80 +634,216 @@ function ToastNotification({ toast, onDismiss }: { toast: Toast; onDismiss: () =
   );
 }
 
+/* ─── SELECT DROPDOWN WRAPPER ────────────────────────────────── */
+function SelectFilter({
+  label,
+  value,
+  onChange,
+  children,
+  loading = false,
+}: {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+  children: React.ReactNode;
+  loading?: boolean;
+}) {
+  return (
+    <div>
+      <label style={{ display: "block", fontSize: "12px", fontWeight: 600, color: C.textLabel, marginBottom: "8px" }}>{label}</label>
+      <div style={{ position: "relative" }}>
+        {loading && (
+          <Loader2
+            size={14}
+            color={C.textHint}
+            style={{ position: "absolute", left: "12px", top: "50%", transform: "translateY(-50%)", animation: "spin 1s linear infinite", zIndex: 1 }}
+          />
+        )}
+        <select
+          value={value}
+          onChange={e => onChange(e.target.value)}
+          disabled={loading}
+          style={{
+            width: "100%",
+            background: C.inputBg,
+            border: `1px solid ${C.border}`,
+            borderRadius: "8px",
+            padding: `10px 36px 10px ${loading ? "34px" : "16px"}`,
+            color: value && value !== "all" ? C.textBody : C.textHint,
+            fontSize: "14px",
+            outline: "none",
+          }}
+        >
+          {children}
+        </select>
+        <ChevronDown size={14} color={C.textHint} style={{ position: "absolute", right: "12px", top: "50%", transform: "translateY(-50%)", pointerEvents: "none" }} />
+      </div>
+    </div>
+  );
+}
+
 /* ─── MAIN PAGE ──────────────────────────────────────────────── */
 export default function EmployeesPage() {
+  const router = useRouter();
   const [isSidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [activeTab, setActiveTab] = useState("employees");
 
-  // Data
+  // Full raw dataset — either every employee in the campaign, or, when a group
+  // filter is active, that group's members fetched from /groups/{id}/members.
+  // Every other filter is applied locally below (see filteredEmployees).
   const [employees, setEmployees] = useState<Employee[]>([]);
-  const [pagination, setPagination] = useState<Pagination>({ limit: 10, offset: 0, total: 0 });
   const [loading, setLoading] = useState(false);
 
-  // Filters
+  // Filter state
   const [searchTerm, setSearchTerm] = useState("");
   const [verificationFilter, setVerificationFilter] = useState("all");
   const [jobCategoryFilter, setJobCategoryFilter] = useState("all");
+  const [genderFilter, setGenderFilter] = useState("all");
+  const [groupFilter, setGroupFilter] = useState("all");
   const [provinceFilter, setProvinceFilter] = useState("all");
   const [cityFilter, setCityFilter] = useState("all");
 
-  // Pagination
+  // Filter options from APIs
+  const [jobCategories, setJobCategories] = useState<JobCategory[]>([]);
+  const [jobCategoriesLoading, setJobCategoriesLoading] = useState(false);
+  const [groups, setGroups] = useState<Group[]>([]);
+  const [groupsLoading, setGroupsLoading] = useState(false);
+
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
 
-  // Selection
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [chatSessionLoadingId, setChatSessionLoadingId] = useState<string | null>(null);
 
-  // Modals
   const [editTarget, setEditTarget] = useState<Employee | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Employee | null>(null);
   const [showAssignGroupModal, setShowAssignGroupModal] = useState(false);
 
-  // Toast
   const [toast, setToast] = useState<Toast | null>(null);
-
   const showToast = useCallback((t: Toast) => setToast(t), []);
 
-  /* ── FETCH EMPLOYEES ─────────────────────────────────────── */
+  // The Group object currently selected in the filter dropdown — same pattern
+  // as the Shortlisted page's `selectedGroup`, used to drive the heading,
+  // subtext, and empty states below.
+  const selectedGroup = useMemo(
+    () => (groupFilter !== "all" ? groups.find(g => String(g.id) === String(groupFilter)) : undefined),
+    [groups, groupFilter]
+  );
+
+  /* ── FETCH JOB CATEGORIES ── */
+  useEffect(() => {
+    setJobCategoriesLoading(true);
+    fetch(`${BASE_URL}/job-categories`, { headers: authHeaders() })
+      .then(r => r.json())
+      .then(j => setJobCategories(j.data || []))
+      .catch(() => showToast({ type: "error", message: "Failed to load job categories." }))
+      .finally(() => setJobCategoriesLoading(false));
+  }, []);
+
+  /* ── FETCH GROUPS (for the filter dropdown) ── */
+  useEffect(() => {
+    setGroupsLoading(true);
+    fetch(`${BASE_URL}/groups`, { headers: authHeaders() })
+      .then(r => r.json())
+      .then(j => setGroups(j.data || j.groups || j || []))
+      .catch(() => showToast({ type: "error", message: "Failed to load groups." }))
+      .finally(() => setGroupsLoading(false));
+  }, []);
+
+  /*
+   * ── FETCH EMPLOYEES ──
+   * Fetches the entire dataset in one shot (high limit, like the Excel export
+   * already did) instead of paging server-side. Gender, verification status,
+   * job category, province, city and search are all filtered locally below in
+   * `filteredEmployees` — that no longer depends on the backend honoring those
+   * query params correctly.
+   *
+   * The Group filter is the one exception: it can't be checked client-side
+   * because membership isn't part of the employee record. `/employees?group_id=X`
+   * turned out to be silently ignored by the backend, so instead — same as the
+   * working Shortlisted page — we hit `/groups/{id}/members` directly, which
+   * actually returns that group's members, and normalize each row into the
+   * Employee shape this page already knows how to render.
+   */
   const fetchEmployees = useCallback(async () => {
     setLoading(true);
     try {
-      const offset = (currentPage - 1) * pageSize;
-      const params = new URLSearchParams();
-      params.set("campaign_id", "1");
-      params.set("limit", String(pageSize));
-      params.set("offset", String(offset));
-      if (verificationFilter !== "all") params.set("verification_status", verificationFilter);
-      if (jobCategoryFilter !== "all") params.set("job_category_id", jobCategoryFilter);
-      if (provinceFilter !== "all") params.set("province", provinceFilter);
-      if (cityFilter !== "all") params.set("city", cityFilter);
-      if (searchTerm.trim()) params.set("search", searchTerm.trim());
+      let rawData: Employee[] = [];
 
-      const res = await fetch(`${BASE_URL}/employees?${params.toString()}`, {
-        headers: authHeaders(),
-      });
-      if (!res.ok) throw new Error(`Error ${res.status}`);
-      const json = await res.json();
-      setEmployees(json.data || []);
-      setPagination(json.pagination || { limit: pageSize, offset, total: 0 });
+      if (groupFilter !== "all") {
+        const res = await fetch(`${BASE_URL}/groups/${groupFilter}/members?limit=10000&offset=0`, { headers: authHeaders() });
+        if (!res.ok) throw new Error(`Error ${res.status}`);
+        const json = await res.json();
+        rawData = (json.data || json.members || []).map(mapGroupMemberToEmployee);
+      } else {
+        const params = new URLSearchParams();
+        params.set("campaign_id", "1");
+        params.set("limit", "10000");
+        params.set("offset", "0");
+        const res = await fetch(`${BASE_URL}/employees?${params.toString()}`, { headers: authHeaders() });
+        if (!res.ok) throw new Error(`Error ${res.status}`);
+        const json = await res.json();
+        rawData = json.data || [];
+      }
+
+      setEmployees(rawData);
     } catch (err: any) {
       showToast({ type: "error", message: err.message || "Failed to load employees." });
     } finally {
       setLoading(false);
     }
-  }, [currentPage, pageSize, verificationFilter, jobCategoryFilter, provinceFilter, cityFilter, searchTerm]);
+  }, [groupFilter]);
 
+  useEffect(() => { fetchEmployees(); }, [fetchEmployees]);
+
+  /* ── CLIENT-SIDE FILTERING — this is what makes every filter reliable ── */
+  const filteredEmployees = useMemo(() => {
+    const term = searchTerm.trim().toLowerCase();
+    const province = provinceFilter === "all" ? "" : provinceFilter.trim().toLowerCase();
+    const city = cityFilter === "all" ? "" : cityFilter.trim().toLowerCase();
+
+    return employees.filter(emp => {
+      // Case-insensitive, trimmed comparison — fixes "Male" (UI) vs "male" (data) mismatches
+      if (genderFilter !== "all" && (emp.gender || "").trim().toLowerCase() !== genderFilter.trim().toLowerCase()) {
+        return false;
+      }
+      if (verificationFilter !== "all" && (emp.verification_status || "").toLowerCase() !== verificationFilter.toLowerCase()) {
+        return false;
+      }
+      // String-normalized comparison — fixes number/string id mismatches (e.g. 3 vs "3")
+      if (jobCategoryFilter !== "all" && String(emp.job_category_id) !== String(jobCategoryFilter)) {
+        return false;
+      }
+      // Partial, case-insensitive match — so typing "surrey" matches "Surrey, BC"
+      if (province && !(emp.province || "").toLowerCase().includes(province)) {
+        return false;
+      }
+      if (city && !(emp.city || "").toLowerCase().includes(city)) {
+        return false;
+      }
+      if (term) {
+        const haystack = `${emp.first_name || ""} ${emp.last_name || ""} ${emp.email || ""} ${emp.phone_number || ""}`.toLowerCase();
+        if (!haystack.includes(term)) return false;
+      }
+      return true;
+    });
+  }, [employees, genderFilter, verificationFilter, jobCategoryFilter, provinceFilter, cityFilter, searchTerm]);
+
+  /* Keep the current page valid whenever the filtered result set changes size */
   useEffect(() => {
-    fetchEmployees();
-  }, [fetchEmployees]);
+    const totalPages = Math.max(1, Math.ceil(filteredEmployees.length / pageSize));
+    setCurrentPage(p => (p > totalPages ? totalPages : p));
+  }, [filteredEmployees.length, pageSize]);
 
-  /* ── VERIFY EMPLOYEE ─────────────────────────────────────── */
+  const visibleEmployees = useMemo(() => {
+    const start = (currentPage - 1) * pageSize;
+    return filteredEmployees.slice(start, start + pageSize);
+  }, [filteredEmployees, currentPage, pageSize]);
+
+  /* ── VERIFY ── */
   const verifyEmployee = async (id: string) => {
     try {
-      const res = await fetch(`${BASE_URL}/employees/${id}/verify`, {
-        method: "PATCH",
-        headers: authHeaders(),
-      });
+      const res = await fetch(`${BASE_URL}/employees/${id}/verify`, { method: "PATCH", headers: authHeaders() });
       if (!res.ok) throw new Error(`Error ${res.status}`);
       setEmployees(prev => prev.map(e => e.id === id ? { ...e, verification_status: "verified" } : e));
       showToast({ type: "success", message: "Employee verified successfully." });
@@ -749,18 +852,9 @@ export default function EmployeesPage() {
     }
   };
 
-  /* ── BULK VERIFY ─────────────────────────────────────────────────────
-     FIX: the old version awaited Promise.all on the raw fetch() calls
-     without ever checking res.ok. fetch() only rejects on network-level
-     failures (no internet, DNS, CORS) — a 4xx/5xx response still resolves
-     normally, so a failed PATCH silently fell through to the success
-     branch. Now every response is checked and its HTTP status code is
-     surfaced (e.g. "Error 400"), and Promise.allSettled is used so one
-     bad id can't be misreported as a success for the others, or cause
-     the whole batch to be reported as a generic failure. ── */
+  /* ── BULK VERIFY ── */
   const bulkVerify = async () => {
     if (!selectedIds.length) return;
-
     const results = await Promise.allSettled(
       selectedIds.map(async (id) => {
         const res = await fetch(`${BASE_URL}/employees/${id}/verify`, { method: "PATCH", headers: authHeaders() });
@@ -768,31 +862,18 @@ export default function EmployeesPage() {
         return id;
       })
     );
-
-    const succeededIds = results
-      .filter((r): r is PromiseFulfilledResult<string> => r.status === "fulfilled")
-      .map(r => r.value);
+    const succeededIds = results.filter((r): r is PromiseFulfilledResult<string> => r.status === "fulfilled").map(r => r.value);
     const failedResults = results.filter((r): r is PromiseRejectedResult => r.status === "rejected");
-
-    if (succeededIds.length) {
-      setEmployees(prev => prev.map(e => succeededIds.includes(e.id) ? { ...e, verification_status: "verified" } : e));
-    }
+    if (succeededIds.length) setEmployees(prev => prev.map(e => succeededIds.includes(e.id) ? { ...e, verification_status: "verified" } : e));
     setSelectedIds(prev => prev.filter(id => !succeededIds.includes(id)));
-
-    if (succeededIds.length && failedResults.length === 0) {
-      showToast({ type: "success", message: `${succeededIds.length} employee${succeededIds.length !== 1 ? "s" : ""} verified.` });
-    } else if (succeededIds.length && failedResults.length) {
-      showToast({ type: "info", message: `${succeededIds.length} verified, ${failedResults.length} failed: ${(failedResults[0].reason as Error).message}` });
-    } else {
-      showToast({ type: "error", message: (failedResults[0]?.reason as Error)?.message || "Bulk verify failed." });
-    }
+    if (succeededIds.length && failedResults.length === 0) showToast({ type: "success", message: `${succeededIds.length} employee${succeededIds.length !== 1 ? "s" : ""} verified.` });
+    else if (succeededIds.length && failedResults.length) showToast({ type: "info", message: `${succeededIds.length} verified, ${failedResults.length} failed.` });
+    else showToast({ type: "error", message: (failedResults[0]?.reason as Error)?.message || "Bulk verify failed." });
   };
 
-  /* ── BULK DELETE ───────────────────────────────────────────────────
-     Same fix as bulkVerify above, applied to the DELETE calls. ── */
+  /* ── BULK DELETE ── */
   const bulkDelete = async () => {
     if (!selectedIds.length) return;
-
     const results = await Promise.allSettled(
       selectedIds.map(async (id) => {
         const res = await fetch(`${BASE_URL}/employees/${id}`, { method: "DELETE", headers: authHeaders() });
@@ -800,101 +881,138 @@ export default function EmployeesPage() {
         return id;
       })
     );
-
-    const succeededIds = results
-      .filter((r): r is PromiseFulfilledResult<string> => r.status === "fulfilled")
-      .map(r => r.value);
+    const succeededIds = results.filter((r): r is PromiseFulfilledResult<string> => r.status === "fulfilled").map(r => r.value);
     const failedResults = results.filter((r): r is PromiseRejectedResult => r.status === "rejected");
-
-    if (succeededIds.length) {
-      setEmployees(prev => prev.filter(e => !succeededIds.includes(e.id)));
-    }
+    if (succeededIds.length) setEmployees(prev => prev.filter(e => !succeededIds.includes(e.id)));
     setSelectedIds(prev => prev.filter(id => !succeededIds.includes(id)));
+    if (succeededIds.length && failedResults.length === 0) showToast({ type: "success", message: `${succeededIds.length} employee${succeededIds.length !== 1 ? "s" : ""} deleted.` });
+    else if (succeededIds.length && failedResults.length) showToast({ type: "info", message: `${succeededIds.length} deleted, ${failedResults.length} failed.` });
+    else showToast({ type: "error", message: (failedResults[0]?.reason as Error)?.message || "Bulk delete failed." });
+  };
 
-    if (succeededIds.length && failedResults.length === 0) {
-      showToast({ type: "success", message: `${succeededIds.length} employee${succeededIds.length !== 1 ? "s" : ""} deleted.` });
-    } else if (succeededIds.length && failedResults.length) {
-      showToast({ type: "info", message: `${succeededIds.length} deleted, ${failedResults.length} failed: ${(failedResults[0].reason as Error).message}` });
-    } else {
-      showToast({ type: "error", message: (failedResults[0]?.reason as Error)?.message || "Bulk delete failed." });
+  /* ── CHAT SESSION ── */
+  const openEmployeeChat = async (emp: Employee) => {
+    if (chatSessionLoadingId) return;
+    setChatSessionLoadingId(emp.id);
+    try {
+      let sessionId = null;
+      try {
+        const getRes = await fetch(
+          `${BASE_URL}/chat/sessions/employee/${emp.id}?mobile_number=${encodeURIComponent(emp.phone_number)}`,
+          { method: "GET", headers: authHeaders() }
+        );
+        if (getRes.ok) {
+          const getJson = await getRes.json();
+          if (getJson?.data?.id) sessionId = getJson.data.id;
+        }
+      } catch {}
+
+      if (!sessionId) {
+        const postRes = await fetch(`${BASE_URL}/chat/sessions/start`, {
+          method: "POST",
+          headers: authHeaders(),
+          body: JSON.stringify({
+            employee_id: emp.id,
+            mobile_number: emp.phone_number,
+            campaign_id: emp.campaign_id,
+            job_category_id: parseInt(emp.job_category_id, 10),
+          }),
+        });
+        if (!postRes.ok) {
+          let serverMessage = "";
+          try { const e = await postRes.json(); serverMessage = e?.message || e?.error || ""; } catch {}
+          throw new Error(serverMessage || `Request failed with status ${postRes.status}`);
+        }
+        const postJson = await postRes.json();
+        sessionId = postJson?.data?.id;
+        if (!sessionId) throw new Error("Chat session response did not include a session id.");
+      }
+
+      const params = new URLSearchParams({
+        name: `${emp.first_name} ${emp.last_name}`.trim(),
+        phone: emp.phone_number || "",
+        sessionId: sessionId,
+        campaignId: String(emp.campaign_id ?? ""),
+        jobCategoryId: emp.job_category_id || "",
+      });
+      router.push(`/chat/${emp.id}?${params.toString()}`);
+    } catch (err: any) {
+      showToast({ type: "error", message: err.message || "Failed to start or retrieve chat session." });
+    } finally {
+      setChatSessionLoadingId(null);
     }
   };
 
-  /* ── AFTER SINGLE DELETE ─────────────────────────────────── */
   const handleDeleted = (id: string) => {
     setEmployees(prev => prev.filter(e => e.id !== id));
     setSelectedIds(prev => prev.filter(x => x !== id));
   };
 
-  /* ── AFTER EDIT ──────────────────────────────────────────── */
-  const handleSaved = (updated: Employee) => {
-    setEmployees(prev => prev.map(e => e.id === updated.id ? updated : e));
-  };
+  const handleSaved = (updated: Employee) => setEmployees(prev => prev.map(e => e.id === updated.id ? updated : e));
+  const handleAssignGroupSuccess = () => setSelectedIds([]);
 
-  /* ── AFTER ASSIGN TO GROUP SUCCESS ──────────────────────── */
-  const handleAssignGroupSuccess = () => {
-    setSelectedIds([]);
-  };
-
-  /* ── EXCEL DOWNLOAD ──────────────────────────────────────── */
-  const downloadExcel = async () => {
-    showToast({ type: "info", message: "Preparing Excel file…" });
+  /* ── EXCEL — now exports whatever the active filters currently match ── */
+  const downloadExcel = () => {
+    if (!filteredEmployees.length) {
+      showToast({ type: "info", message: "No employees match the current filters." });
+      return;
+    }
     try {
-      const res = await fetch(`${BASE_URL}/employees?campaign_id=1&limit=10000&offset=0`, {
-        headers: authHeaders(),
-      });
-      if (!res.ok) throw new Error(`Error ${res.status}`);
-      const json = await res.json();
-      const allData: Employee[] = json.data || [];
-
-      const rows = allData.map(e => ({
-        "First Name": e.first_name,
-        "Last Name": e.last_name,
-        "Email": e.email,
-        "Phone": e.phone_number,
-        "Gender": e.gender,
-        "DOB": e.date_of_birth,
-        "City": e.city,
-        "Province": e.province,
-        "Postal Code": e.postal_code,
-        "Job Category": e.job_categories?.name || "",
-        "Job Industry": e.job_industries?.name || "",
-        "Campaign": e.campaigns?.name || "",
-        "Verification Status": e.verification_status,
-        "Available From": e.available_from,
-        "Permit Status": e.permit_status,
-        "Shift Preference": e.shift_preference,
-        "License Required": e.license_required ? "Yes" : "No",
-        "License Expiry Month": e.license_expiry_month ?? "",
-        "License Expiry Year": e.license_expiry_year ?? "",
-        "Resume URL": e.resume_url,
+      const rows = filteredEmployees.map(e => ({
+        "First Name": e.first_name, "Last Name": e.last_name, "Email": e.email,
+        "Phone": e.phone_number, "Gender": e.gender, "DOB": e.date_of_birth,
+        "City": e.city, "Province": e.province, "Postal Code": e.postal_code,
+        "Job Category": e.job_categories?.name || "", "Job Industry": e.job_industries?.name || "",
+        "Campaign": e.campaigns?.name || "", "Verification Status": e.verification_status,
+        "Available From": e.available_from, "Permit Status": e.permit_status,
+        "Shift Preference": e.shift_preference, "License Required": e.license_required ? "Yes" : "No",
         "Registered At": formatDate(e.created_at),
       }));
-
       const ws = XLSX.utils.json_to_sheet(rows);
       const wb = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(wb, ws, "Employees");
-
-      const colWidths = Object.keys(rows[0] || {}).map(k => ({ wch: Math.max(k.length + 2, 16) }));
-      ws["!cols"] = colWidths;
-
-      XLSX.writeFile(wb, `JBR_Employees_${new Date().toISOString().slice(0, 10)}.xlsx`);
-      showToast({ type: "success", message: `Exported ${allData.length} employees to Excel.` });
+      const sheetName = selectedGroup ? selectedGroup.name.slice(0, 31) : "Employees";
+      XLSX.utils.book_append_sheet(wb, ws, sheetName);
+      ws["!cols"] = Object.keys(rows[0] || {}).map(k => ({ wch: Math.max(k.length + 2, 16) }));
+      const fileLabel = selectedGroup ? selectedGroup.name.replace(/\s+/g, "_") : "Employees";
+      XLSX.writeFile(wb, `JBR_${fileLabel}_${new Date().toISOString().slice(0, 10)}.xlsx`);
+      showToast({ type: "success", message: `Exported ${rows.length} employees to Excel.` });
     } catch (err: any) {
       showToast({ type: "error", message: err.message || "Excel export failed." });
     }
   };
 
-  /* ── SELECTION ───────────────────────────────────────────── */
+  /* ── SELECTION (scoped to the currently visible page) ── */
   const toggleRow = (id: string) => setSelectedIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
-  const toggleAll = () => setSelectedIds(prev => prev.length === employees.length ? [] : employees.map(e => e.id));
+  const toggleAll = () => {
+    const visibleIds = visibleEmployees.map(e => e.id);
+    const allVisibleSelected = visibleIds.length > 0 && visibleIds.every(id => selectedIds.includes(id));
+    setSelectedIds(prev => allVisibleSelected
+      ? prev.filter(id => !visibleIds.includes(id))
+      : Array.from(new Set([...prev, ...visibleIds]))
+    );
+  };
 
-  /* ── PAGINATION ──────────────────────────────────────────── */
-  const totalPages = Math.ceil(pagination.total / pageSize);
-  const startIndex = (currentPage - 1) * pageSize + 1;
-  const endIndex = Math.min(currentPage * pageSize, pagination.total);
+  /* ── PAGINATION (derived from the filtered set) ── */
+  const totalFiltered = filteredEmployees.length;
+  const totalPages = Math.max(1, Math.ceil(totalFiltered / pageSize));
+  const startIndex = totalFiltered > 0 ? (currentPage - 1) * pageSize + 1 : 0;
+  const endIndex = Math.min(currentPage * pageSize, totalFiltered);
 
-  const tableGridTemplate = "40px 1.3fr 1.8fr 1.2fr 0.8fr 1.2fr 1.2fr 0.9fr 1fr 1.6fr 90px";
+  const tableGridTemplate = "40px 1.3fr 1.8fr 1.2fr 0.8fr 1.2fr 1.2fr 0.9fr 1fr 1.6fr 120px";
+
+  const resetFilters = () => {
+    setSearchTerm("");
+    setVerificationFilter("all");
+    setJobCategoryFilter("all");
+    setGenderFilter("all");
+    setGroupFilter("all");
+    setProvinceFilter("all");
+    setCityFilter("all");
+    setCurrentPage(1);
+  };
+
+  const hasActiveFilters = searchTerm || verificationFilter !== "all" || jobCategoryFilter !== "all" ||
+    genderFilter !== "all" || groupFilter !== "all" || provinceFilter !== "all" || cityFilter !== "all";
 
   return (
     <>
@@ -912,16 +1030,36 @@ export default function EmployeesPage() {
             {/* Header */}
             <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }}>
               <h1 style={{ display: "flex", alignItems: "center", gap: "12px", fontFamily: "'Cormorant Garamond', serif", fontSize: "42px", fontWeight: 600, color: C.textHeading, marginBottom: "8px", letterSpacing: "-0.5px" }}>
-                <Users size={32} color={C.red} strokeWidth={2} /> Employee Management
+                <Users size={32} color={C.red} strokeWidth={2} /> {selectedGroup ? selectedGroup.name : "Employee Management"}
               </h1>
-              <p style={{ fontSize: "15px", color: C.textMuted }}>View and manage registered candidates and their information.</p>
+              <p style={{ fontSize: "15px", color: C.textMuted }}>
+                {selectedGroup
+                  ? `Viewing members of "${selectedGroup.name}". Clear the group filter to see all employees.`
+                  : "View and manage registered candidates and their information."}
+              </p>
             </motion.div>
 
-            {/* Filters */}
+            {/* ── FILTERS ── */}
             <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, delay: 0.1 }} className="clean-card" style={{ padding: "24px 32px" }}>
-              <h3 style={{ fontSize: "18px", fontWeight: 600, color: C.textHeading, marginBottom: "4px" }}>Filters</h3>
-              <p style={{ fontSize: "13px", color: C.textMuted, marginBottom: "20px" }}>Filter candidates by various criteria</p>
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "20px" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "20px" }}>
+                <div>
+                  <h3 style={{ fontSize: "18px", fontWeight: 600, color: C.textHeading, marginBottom: "4px" }}>Filters</h3>
+                  <p style={{ fontSize: "13px", color: C.textMuted }}>Filter candidates by various criteria</p>
+                </div>
+                {hasActiveFilters && (
+                  <motion.button
+                    whileHover={{ backgroundColor: C.redActiveBg, borderColor: C.red, color: C.red }}
+                    whileTap={{ scale: 0.97 }}
+                    onClick={resetFilters}
+                    style={{ display: "flex", alignItems: "center", gap: "6px", padding: "7px 14px", background: "transparent", border: `1px solid ${C.border}`, borderRadius: "6px", color: C.textMuted, fontSize: "12px", fontWeight: 600, cursor: "pointer", transition: "all 0.2s" }}
+                  >
+                    <X size={13} /> Clear Filters
+                  </motion.button>
+                )}
+              </div>
+
+              {/* Row 1: Search + Verification Status + Gender */}
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "20px", marginBottom: "20px" }}>
 
                 {/* Search */}
                 <div>
@@ -936,40 +1074,60 @@ export default function EmployeesPage() {
                 </div>
 
                 {/* Verification Status */}
-                <div>
-                  <label style={{ display: "block", fontSize: "12px", fontWeight: 600, color: C.textLabel, marginBottom: "8px" }}>Verification Status</label>
-                  <div style={{ position: "relative" }}>
-                    <select value={verificationFilter} onChange={e => { setVerificationFilter(e.target.value); setCurrentPage(1); }}
-                      style={{ width: "100%", background: C.inputBg, border: `1px solid ${C.border}`, borderRadius: "8px", padding: "10px 36px 10px 16px", color: C.textBody, fontSize: "14px", outline: "none" }}>
-                      <option value="all">All Statuses</option>
-                      <option value="pending">Pending</option>
-                      <option value="verified">Verified</option>
-                      <option value="rejected">Rejected</option>
-                    </select>
-                    <ChevronDown size={14} color={C.textHint} style={{ position: "absolute", right: "12px", top: "50%", transform: "translateY(-50%)", pointerEvents: "none" }} />
-                  </div>
-                </div>
+                <SelectFilter label="Verification Status" value={verificationFilter} onChange={v => { setVerificationFilter(v); setCurrentPage(1); }}>
+                  <option value="all">All Statuses</option>
+                  <option value="pending">Pending</option>
+                  <option value="verified">Verified</option>
+                  <option value="rejected">Rejected</option>
+                </SelectFilter>
+
+                {/* Gender */}
+                <SelectFilter label="Gender" value={genderFilter} onChange={v => { setGenderFilter(v); setCurrentPage(1); }}>
+                  <option value="all">All Genders</option>
+                  <option value="Male">Male</option>
+                  <option value="Female">Female</option>
+                  <option value="Other">Other</option>
+                </SelectFilter>
+
+                {/* Job Category */}
+                <SelectFilter label="Job Category" value={jobCategoryFilter} onChange={v => { setJobCategoryFilter(v); setCurrentPage(1); }} loading={jobCategoriesLoading}>
+                  <option value="all">All Categories</option>
+                  {jobCategories.map(cat => (
+                    <option key={cat.id} value={cat.id}>{cat.name}</option>
+                  ))}
+                </SelectFilter>
+
+              </div>
+
+              {/* Row 2: Group + Province + City */}
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "20px" }}>
+
+                {/* Group */}
+                <SelectFilter label="Group" value={groupFilter} onChange={v => { setGroupFilter(v); setCurrentPage(1); }} loading={groupsLoading}>
+                  <option value="all">All Groups</option>
+                  {groups.map(g => (
+                    <option key={g.id} value={String(g.id)}>
+                      {g.name}{g.member_count !== undefined ? ` (${g.member_count})` : ""}
+                    </option>
+                  ))}
+                </SelectFilter>
 
                 {/* Province */}
                 <div>
                   <label style={{ display: "block", fontSize: "12px", fontWeight: 600, color: C.textLabel, marginBottom: "8px" }}>Province</label>
-                  <div style={{ position: "relative" }}>
-                    <input type="text" placeholder="e.g. British Columbia" value={provinceFilter === "all" ? "" : provinceFilter}
-                      onChange={e => { setProvinceFilter(e.target.value || "all"); setCurrentPage(1); }}
-                      style={{ width: "100%", background: C.inputBg, border: `1px solid ${C.border}`, borderRadius: "8px", padding: "10px 16px", color: C.textBody, fontSize: "14px", outline: "none" }}
-                      onFocus={e => e.target.style.borderColor = C.red} onBlur={e => e.target.style.borderColor = C.border} />
-                  </div>
+                  <input type="text" placeholder="e.g. British Columbia" value={provinceFilter === "all" ? "" : provinceFilter}
+                    onChange={e => { setProvinceFilter(e.target.value || "all"); setCurrentPage(1); }}
+                    style={{ width: "100%", background: C.inputBg, border: `1px solid ${C.border}`, borderRadius: "8px", padding: "10px 16px", color: C.textBody, fontSize: "14px", outline: "none" }}
+                    onFocus={e => e.target.style.borderColor = C.red} onBlur={e => e.target.style.borderColor = C.border} />
                 </div>
 
                 {/* City */}
                 <div>
                   <label style={{ display: "block", fontSize: "12px", fontWeight: 600, color: C.textLabel, marginBottom: "8px" }}>City</label>
-                  <div style={{ position: "relative" }}>
-                    <input type="text" placeholder="e.g. Surrey" value={cityFilter === "all" ? "" : cityFilter}
-                      onChange={e => { setCityFilter(e.target.value || "all"); setCurrentPage(1); }}
-                      style={{ width: "100%", background: C.inputBg, border: `1px solid ${C.border}`, borderRadius: "8px", padding: "10px 16px", color: C.textBody, fontSize: "14px", outline: "none" }}
-                      onFocus={e => e.target.style.borderColor = C.red} onBlur={e => e.target.style.borderColor = C.border} />
-                  </div>
+                  <input type="text" placeholder="e.g. Surrey" value={cityFilter === "all" ? "" : cityFilter}
+                    onChange={e => { setCityFilter(e.target.value || "all"); setCurrentPage(1); }}
+                    style={{ width: "100%", background: C.inputBg, border: `1px solid ${C.border}`, borderRadius: "8px", padding: "10px 16px", color: C.textBody, fontSize: "14px", outline: "none" }}
+                    onFocus={e => e.target.style.borderColor = C.red} onBlur={e => e.target.style.borderColor = C.border} />
                 </div>
 
               </div>
@@ -983,10 +1141,14 @@ export default function EmployeesPage() {
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", flexWrap: "wrap", gap: "16px", marginBottom: "20px" }}>
                   <div>
                     <h3 style={{ fontSize: "20px", fontWeight: 600, color: C.textHeading, display: "flex", alignItems: "center", gap: "8px" }}>
-                      Employees <span style={{ color: C.redBright }}>({pagination.total})</span>
+                      {selectedGroup ? selectedGroup.name : "Employees"} <span style={{ color: C.redBright }}>({totalFiltered})</span>
                     </h3>
                     <p style={{ fontSize: "13px", color: C.textMuted, marginTop: "4px" }}>
-                      {loading ? "Loading…" : `Showing ${pagination.total > 0 ? startIndex : 0}–${endIndex} of ${pagination.total}`}
+                      {loading
+                        ? "Loading…"
+                        : totalFiltered === 0 && selectedGroup
+                        ? `No members in "${selectedGroup.name}" match the current filters`
+                        : `Showing ${startIndex}–${endIndex} of ${totalFiltered}`}
                     </p>
                   </div>
                   <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
@@ -1009,7 +1171,7 @@ export default function EmployeesPage() {
                   <motion.button whileHover={{ backgroundColor: C.redActiveBg, borderColor: C.red, color: C.red }} whileTap={{ scale: 0.98 }}
                     onClick={downloadExcel}
                     style={{ display: "flex", alignItems: "center", gap: "8px", padding: "8px 16px", background: "transparent", border: `1px solid ${C.border}`, borderRadius: "6px", color: C.textLabel, fontSize: "13px", fontWeight: 600, cursor: "pointer", transition: "all 0.2s" }}>
-                    <FileSpreadsheet size={16} /> Download Excel ({pagination.total})
+                    <FileSpreadsheet size={16} /> Download Excel ({totalFiltered})
                   </motion.button>
 
                   <motion.button disabled={!selectedIds.length}
@@ -1025,21 +1187,12 @@ export default function EmployeesPage() {
                     <MessageCircle size={16} /> Send WhatsApp ({selectedIds.length})
                   </motion.button>
 
-                  {/* ── ASSIGN TO GROUP BUTTON ── */}
                   <motion.button
                     disabled={!selectedIds.length}
                     whileHover={selectedIds.length ? { backgroundColor: C.redActiveBg, borderColor: C.red, color: C.red } : {}}
                     whileTap={selectedIds.length ? { scale: 0.98 } : {}}
                     onClick={() => selectedIds.length > 0 && setShowAssignGroupModal(true)}
-                    style={{
-                      display: "flex", alignItems: "center", gap: "8px",
-                      padding: "8px 16px", background: "transparent",
-                      border: `1px solid ${C.border}`, borderRadius: "6px",
-                      color: selectedIds.length ? C.textHeading : C.textHint,
-                      fontSize: "13px", fontWeight: 600,
-                      cursor: selectedIds.length ? "pointer" : "not-allowed",
-                      transition: "all 0.2s"
-                    }}>
+                    style={{ display: "flex", alignItems: "center", gap: "8px", padding: "8px 16px", background: "transparent", border: `1px solid ${C.border}`, borderRadius: "6px", color: selectedIds.length ? C.textHeading : C.textHint, fontSize: "13px", fontWeight: 600, cursor: selectedIds.length ? "pointer" : "not-allowed", transition: "all 0.2s" }}>
                     <UserPlus size={16} /> Assign to Group ({selectedIds.length})
                   </motion.button>
 
@@ -1059,7 +1212,7 @@ export default function EmployeesPage() {
                   {/* Column Headers */}
                   <div style={{ display: "grid", gridTemplateColumns: tableGridTemplate, padding: "16px 32px", borderBottom: `1px solid ${C.border}`, background: C.inputBg, alignItems: "center" }}>
                     <button onClick={toggleAll} style={{ background: "none", border: "none", color: C.textHint, cursor: "pointer", padding: 0, display: "flex" }}>
-                      {selectedIds.length === employees.length && employees.length > 0 ? <CheckSquare size={16} color={C.red} /> : <Square size={16} />}
+                      {visibleEmployees.length > 0 && visibleEmployees.every(e => selectedIds.includes(e.id)) ? <CheckSquare size={16} color={C.red} /> : <Square size={16} />}
                     </button>
                     {["Name", "Email", "Phone", "Gender", "Job Category", "Location", "Status", "Registered", "Documents", "Actions"].map((h, i) => (
                       <span key={i} style={{ fontSize: "11px", textTransform: "uppercase", letterSpacing: "1px", color: C.textHint, fontWeight: 600 }}>{h}</span>
@@ -1070,62 +1223,66 @@ export default function EmployeesPage() {
                   {loading ? (
                     <div style={{ padding: "60px", textAlign: "center", color: C.textMuted, display: "flex", alignItems: "center", justifyContent: "center", gap: "12px" }}>
                       <Loader2 size={20} style={{ animation: "spin 1s linear infinite", color: C.red }} />
-                      <span>Loading employees…</span>
+                      <span>{selectedGroup ? `Loading "${selectedGroup.name}" members…` : "Loading employees…"}</span>
                     </div>
-                  ) : employees.length === 0 ? (
-                    <div style={{ padding: "60px", textAlign: "center", color: C.textMuted }}>No employees found.</div>
+                  ) : visibleEmployees.length === 0 ? (
+                    <div style={{ padding: "60px", textAlign: "center", color: C.textMuted, display: "flex", flexDirection: "column", alignItems: "center", gap: "10px" }}>
+                      <Users size={36} color={C.textHint} strokeWidth={1.5} />
+                      {selectedGroup
+                        ? hasActiveFilters
+                          ? `No members in "${selectedGroup.name}" match the selected filters.`
+                          : `"${selectedGroup.name}" has no members yet.`
+                        : hasActiveFilters
+                        ? "No employees match the selected filters."
+                        : "No employees found."}
+                    </div>
                   ) : (
                     <div style={{ display: "flex", flexDirection: "column" }}>
-                      {employees.map((emp, idx) => {
+                      {visibleEmployees.map((emp, idx) => {
                         const isSelected = selectedIds.includes(emp.id);
                         const badge = getVerificationBadge(emp.verification_status);
+                        const isChatLoading = chatSessionLoadingId === emp.id;
+                        const fullName = `${emp.first_name || ""} ${emp.last_name || ""}`.trim();
                         return (
                           <motion.div key={emp.id} variants={itemVars}
                             whileHover={{ backgroundColor: C.inputBg }}
-                            style={{ display: "grid", gridTemplateColumns: tableGridTemplate, alignItems: "center", padding: "16px 32px", borderBottom: idx !== employees.length - 1 ? `1px solid ${C.border}` : "none", background: isSelected ? C.redActiveBg : "transparent", transition: "background-color 0.2s" }}>
+                            style={{ display: "grid", gridTemplateColumns: tableGridTemplate, alignItems: "center", padding: "16px 32px", borderBottom: idx !== visibleEmployees.length - 1 ? `1px solid ${C.border}` : "none", background: isSelected ? C.redActiveBg : "transparent", transition: "background-color 0.2s" }}>
 
-                            {/* Checkbox */}
                             <button onClick={() => toggleRow(emp.id)} style={{ background: "none", border: "none", color: isSelected ? C.red : C.textHint, cursor: "pointer", padding: 0, display: "flex" }}>
                               {isSelected ? <CheckSquare size={16} /> : <Square size={16} />}
                             </button>
 
-                            {/* Name */}
                             <div style={{ fontSize: "14px", fontWeight: 600, color: C.textHeading, lineHeight: 1.4 }}>
-                              <div>{emp.first_name}</div>
-                              <div>{emp.last_name}</div>
+                              {fullName ? (
+                                <>
+                                  <div>{emp.first_name}</div>
+                                  <div>{emp.last_name}</div>
+                                </>
+                              ) : (
+                                <span style={{ color: C.textHint, fontWeight: 500 }}>—</span>
+                              )}
                             </div>
 
-                            {/* Email */}
-                            <div style={{ fontSize: "13px", color: C.textMuted, wordBreak: "break-all", paddingRight: "16px" }}>{emp.email}</div>
-
-                            {/* Phone */}
-                            <div style={{ fontSize: "13px", color: C.textMuted }}>{emp.phone_number}</div>
-
-                            {/* Gender */}
+                            <div style={{ fontSize: "13px", color: C.textMuted, wordBreak: "break-all", paddingRight: "16px" }}>{emp.email || "—"}</div>
+                            <div style={{ fontSize: "13px", color: C.textMuted }}>{emp.phone_number || "—"}</div>
                             <div style={{ fontSize: "13px", color: C.textMuted }}>{emp.gender || "—"}</div>
-
-                            {/* Job */}
                             <div style={{ fontSize: "14px", color: C.textBody, fontWeight: 500 }}>{emp.job_categories?.name || "—"}</div>
 
-                            {/* Location */}
                             <div style={{ fontSize: "13px", color: C.textMuted, lineHeight: 1.4 }}>
-                              <div>{emp.city},</div>
+                              <div>{emp.city || "—"}{emp.city && emp.province ? "," : ""}</div>
                               <div>{emp.province}</div>
                             </div>
 
-                            {/* Status */}
                             <div>
                               <div style={{ display: "inline-flex", alignItems: "center", padding: "6px 12px", borderRadius: "20px", background: badge.bg, border: `1px solid ${badge.border}`, color: badge.color, fontSize: "11px", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.5px" }}>
                                 {badge.label}
                               </div>
                             </div>
 
-                            {/* Registered */}
                             <div style={{ fontSize: "13px", color: C.textMuted, display: "flex", alignItems: "center", gap: "6px" }}>
                               <Calendar size={14} /> {formatDate(emp.created_at)}
                             </div>
 
-                            {/* Documents */}
                             <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
                               {emp.resume_url && (
                                 <a href={emp.resume_url} target="_blank" rel="noreferrer">
@@ -1145,7 +1302,16 @@ export default function EmployeesPage() {
 
                             {/* Actions */}
                             <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                              {/* Verify */}
+                              <motion.button
+                                whileHover={!isChatLoading ? { scale: 1.1, backgroundColor: "rgba(59,130,246,0.08)", color: "#3B82F6", borderColor: "#3B82F6" } : {}}
+                                whileTap={!isChatLoading ? { scale: 0.9 } : {}}
+                                onClick={() => openEmployeeChat(emp)}
+                                disabled={isChatLoading}
+                                title="Open Chat"
+                                style={{ background: "transparent", border: `1px solid ${C.border}`, borderRadius: "6px", color: C.textHint, cursor: isChatLoading ? "not-allowed" : "pointer", padding: "8px", display: "flex", opacity: isChatLoading ? 0.6 : 1, transition: "all 0.2s" }}>
+                                {isChatLoading ? <Loader2 size={15} style={{ animation: "spin 1s linear infinite" }} /> : <MessageSquare size={15} />}
+                              </motion.button>
+
                               {emp.verification_status !== "verified" && (
                                 <motion.button
                                   whileHover={{ scale: 1.1, backgroundColor: C.successBg, color: C.successText, borderColor: C.successText }}
@@ -1156,7 +1322,7 @@ export default function EmployeesPage() {
                                   <CheckCheck size={15} />
                                 </motion.button>
                               )}
-                              {/* Edit */}
+
                               <motion.button
                                 whileHover={{ scale: 1.1, backgroundColor: C.redActiveBg, color: C.red, borderColor: C.red }}
                                 whileTap={{ scale: 0.9 }}
@@ -1165,7 +1331,7 @@ export default function EmployeesPage() {
                                 style={{ background: "transparent", border: `1px solid ${C.border}`, borderRadius: "6px", color: C.textHint, cursor: "pointer", padding: "8px", display: "flex", transition: "all 0.2s" }}>
                                 <Edit2 size={15} />
                               </motion.button>
-                              {/* Delete */}
+
                               <motion.button
                                 whileHover={{ scale: 1.1, backgroundColor: C.redActiveBg, color: C.redBright, borderColor: C.redBright }}
                                 whileTap={{ scale: 0.9 }}
@@ -1187,7 +1353,7 @@ export default function EmployeesPage() {
               {/* Pagination Footer */}
               <div style={{ padding: "16px 32px", borderTop: `1px solid ${C.border}`, background: C.inputBg, display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "16px" }}>
                 <span style={{ fontSize: "13px", color: C.textMuted }}>
-                  Showing <strong style={{ color: C.textHeading }}>{pagination.total > 0 ? startIndex : 0}</strong> to <strong style={{ color: C.textHeading }}>{endIndex}</strong> of {pagination.total} results
+                  Showing <strong style={{ color: C.textHeading }}>{startIndex}</strong> to <strong style={{ color: C.textHeading }}>{endIndex}</strong> of {totalFiltered} results
                 </span>
                 <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
                   <button onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1}
@@ -1219,19 +1385,10 @@ export default function EmployeesPage() {
 
       {/* ── MODALS ── */}
       <AnimatePresence>
-        {editTarget && (
-          <EditModal employee={editTarget} onClose={() => setEditTarget(null)} onSaved={handleSaved} showToast={showToast} />
-        )}
-        {deleteTarget && (
-          <DeleteModal employee={deleteTarget} onClose={() => setDeleteTarget(null)} onDeleted={handleDeleted} showToast={showToast} />
-        )}
+        {editTarget && <EditModal employee={editTarget} onClose={() => setEditTarget(null)} onSaved={handleSaved} showToast={showToast} />}
+        {deleteTarget && <DeleteModal employee={deleteTarget} onClose={() => setDeleteTarget(null)} onDeleted={handleDeleted} showToast={showToast} />}
         {showAssignGroupModal && (
-          <AssignGroupModal
-            selectedIds={selectedIds}
-            onClose={() => setShowAssignGroupModal(false)}
-            showToast={showToast}
-            onSuccess={handleAssignGroupSuccess}
-          />
+          <AssignGroupModal selectedIds={selectedIds} onClose={() => setShowAssignGroupModal(false)} showToast={showToast} onSuccess={handleAssignGroupSuccess} />
         )}
       </AnimatePresence>
 
