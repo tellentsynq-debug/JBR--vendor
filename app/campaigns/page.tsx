@@ -109,7 +109,7 @@ const containerVars: Variants = {
 };
 const itemVars: Variants = {
   hidden: { opacity: 0, y: 12 },
-  show: { opacity: 1, y: 0, transition: { type: "spring", stiffness: 200, damping: 22 } }
+  show: { opacity: 1, y: 0, transition: { type: "spring" as const, stiffness: 200, damping: 22 } }
 };
 
 /* ─── TOP NAV ────────────────────────────────────────────────── */
@@ -996,3 +996,4 @@ export default function CampaignsPage() {
     </>
   );
 }
+

@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { motion, AnimatePresence, cubicBezier } from "framer-motion";
+import { motion, AnimatePresence, cubicBezier, type Variants } from "framer-motion";
 import {
   LogOut, Plus, Search, Edit2, X, Trash2, AlertTriangle,
   Warehouse, MapPin, User, Building2, Check, RefreshCw
@@ -87,7 +87,7 @@ const containerVars = {
 };
 const itemVars = {
   hidden: { opacity: 0, y: 12 },
-  show: { opacity: 1, y: 0, transition: { type: "spring", stiffness: 200, damping: 22 } }
+  show: { opacity: 1, y: 0, transition: { type: "spring" as const, stiffness: 200, damping: 22 } }
 };
 
 /* ─── SPINNER ────────────────────────────────────────────────── */
@@ -723,4 +723,6 @@ export default function WarehousePage() {
     </>
   );
 }
+
+
 

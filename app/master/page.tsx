@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useCallback } from "react";
-import { motion, AnimatePresence, cubicBezier } from "framer-motion";
+import { motion, AnimatePresence, cubicBezier, type Variants } from "framer-motion";
 import {
   LogOut, Plus, Search, Edit2, Trash2, Settings,
   Briefcase, Layers, Users, Link as LinkIcon, MapPin,
@@ -243,7 +243,7 @@ const SUB_TABS = [
 /* ─── ANIMATION VARIANTS ─────────────────────────────────────── */
 const easeOutCirc = cubicBezier(0.0, 0.55, 0.45, 1);
 const containerVars = { hidden: { opacity: 0 }, show: { opacity: 1, transition: { staggerChildren: 0.05, delayChildren: 0.1 } } };
-const itemVars = { hidden: { opacity: 0, y: 10 }, show: { opacity: 1, y: 0, transition: { type: "spring", stiffness: 200, damping: 20 } } };
+const itemVars = { hidden: { opacity: 0, y: 10 }, show: { opacity: 1, y: 0, transition: { type: "spring" as const, stiffness: 200, damping: 20 } } };
 
 /* ─── CAMPAIGN HELPERS ───────────────────────────────────────── */
 function formatCampaignDate(iso: string): string {
@@ -2198,4 +2198,6 @@ const handleToggleCampaignStatus = async (camp: Campaign) => {
     </>
   );
 }
+
+
 

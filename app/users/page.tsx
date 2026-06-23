@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useCallback } from "react";
-import { motion, AnimatePresence, cubicBezier } from "framer-motion";
+import { motion, AnimatePresence, cubicBezier, type Variants } from "framer-motion";
 import { 
   LogOut, Plus, UserCog, X, ChevronDown, CheckCircle, AlertCircle
 } from "lucide-react";
@@ -92,7 +92,7 @@ const getRoleBadgeStyle = (role: string) => {
 /* ─── ANIMATION VARIANTS ─────────────────────────────────────── */
 const easeOutCirc = cubicBezier(0.0, 0.55, 0.45, 1);
 const containerVars = { hidden: { opacity: 0 }, show: { opacity: 1, transition: { staggerChildren: 0.05, delayChildren: 0.1 } }};
-const itemVars = { hidden: { opacity: 0, y: 10 }, show: { opacity: 1, y: 0, transition: { type: "spring", stiffness: 200, damping: 20 } }};
+const itemVars = { hidden: { opacity: 0, y: 10 }, show: { opacity: 1, y: 0, transition: { type: "spring" as const, stiffness: 200, damping: 20 } }};
 
 /* ─── TOAST NOTIFICATION ─────────────────────────────────────── */
 type ToastType = "success" | "error";
@@ -105,7 +105,7 @@ function Toast({ message, type }: ToastProps) {
       initial={{ opacity: 0, y: -24, scale: 0.97 }}
       animate={{ opacity: 1, y: 0,   scale: 1    }}
       exit={{    opacity: 0, y: -16, scale: 0.97 }}
-      transition={{ type: "spring", stiffness: 260, damping: 22 }}
+      transition={{ type: "spring" as const, stiffness: 260, damping: 22 }}
       style={{
         position: "fixed", top: "28px", left: "50%", transform: "translateX(-50%)",
         zIndex: 200, display: "flex", alignItems: "center", gap: "12px",
@@ -581,4 +581,7 @@ export default function UserManagementPage() {
     </>
   );
 }
+
+
+
 

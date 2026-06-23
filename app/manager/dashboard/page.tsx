@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { motion, AnimatePresence, cubicBezier } from "framer-motion";
+import { motion, AnimatePresence, cubicBezier, type Variants } from "framer-motion";
 import { useRouter } from "next/navigation"; 
 import { 
   Users, 
@@ -113,7 +113,7 @@ const totalShifts = SHIFT_STATS.filled + SHIFT_STATS.open + SHIFT_STATS.cancelle
 
 /* ─── ANIMATION VARIANTS ─────────────────────────────────────── */
 const easeOutCirc = cubicBezier(0.0, 0.55, 0.45, 1);
-const spring = { type: "spring", stiffness: 200, damping: 20 };
+const spring = { type: "spring" as const, stiffness: 200, damping: 20 };
 
 const containerVars = {
   hidden: { opacity: 0 },
@@ -487,4 +487,6 @@ export default function ManagerDashboard() {
     </>
   );
 }
+
+
 

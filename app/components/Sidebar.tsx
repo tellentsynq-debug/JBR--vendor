@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { motion, AnimatePresence, cubicBezier } from "framer-motion";
+import { motion, AnimatePresence, cubicBezier, type Variants } from "framer-motion";
 import { 
   Users, LayoutDashboard, Link as LinkIcon, UserCheck, 
   UserCog, Settings, BarChart3, ChevronLeft, Menu, Warehouse
@@ -179,3 +179,4 @@ export default function Sidebar({ isCollapsed, setCollapsed, activeTab, setActiv
     </motion.aside>
   );
 }
+

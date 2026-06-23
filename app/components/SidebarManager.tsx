@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { motion, AnimatePresence, cubicBezier } from "framer-motion";
+import { motion, AnimatePresence, cubicBezier, type Variants } from "framer-motion";
 import { 
   LayoutDashboard, 
   Users, 
@@ -160,4 +160,5 @@ export default function ManagerSidebar({ isCollapsed, setCollapsed, activeTab, s
     </motion.aside>
   );
 }
+
 

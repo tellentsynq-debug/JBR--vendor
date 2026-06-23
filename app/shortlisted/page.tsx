@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useCallback, useRef, useMemo } from "react";
-import { motion, AnimatePresence, cubicBezier } from "framer-motion";
+import { motion, AnimatePresence, cubicBezier, type Variants } from "framer-motion";
 import {
   LogOut, Search, ChevronDown, CheckCircle, MessageCircle, Users,
   Trash2, Eye, UserCheck, ChevronLeft, ChevronRight, Square,
@@ -152,7 +152,7 @@ const containerVars = {
 };
 const itemVars = {
   hidden: { opacity: 0, y: 10 },
-  show: { opacity: 1, y: 0, transition: { type: "spring", stiffness: 200, damping: 20 } },
+  show: { opacity: 1, y: 0, transition: { type: "spring" as const, stiffness: 200, damping: 20 } },
 };
 
 /* ─── TOAST ──────────────────────────────────────────────────── */
@@ -2327,4 +2327,6 @@ export default function ShortlistedPage() {
     </>
   );
 }
+
+
 

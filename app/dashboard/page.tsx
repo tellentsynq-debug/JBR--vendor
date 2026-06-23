@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { motion, AnimatePresence, cubicBezier } from "framer-motion";
+import { motion, AnimatePresence, cubicBezier, type Variants } from "framer-motion";
 import { useRouter, usePathname } from "next/navigation"; 
 import { 
   Users, 
@@ -78,14 +78,14 @@ const GLOBAL_CSS = `
 
 /* ─── ANIMATION VARIANTS ─────────────────────────────────────── */
 const easeOutCirc = cubicBezier(0.0, 0.55, 0.45, 1);
-const spring = { type: "spring", stiffness: 200, damping: 20 };
+const spring = { type: "spring" as const, stiffness: 200, damping: 20 };
 
-const containerVars = {
+const containerVars: Variants = {
   hidden: { opacity: 0 },
   show: { opacity: 1, transition: { staggerChildren: 0.08, delayChildren: 0.1 } }
 };
 
-const itemVars = {
+const itemVars: Variants = {
   hidden: { opacity: 0, y: 20 },
   show: { opacity: 1, y: 0, transition: spring }
 };
@@ -525,4 +525,6 @@ export default function JBRLayout() {
     </>
   );
 }
+
+
 
