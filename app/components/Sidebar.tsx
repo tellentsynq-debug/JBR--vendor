@@ -7,6 +7,7 @@ import {
   UserCog, Settings, BarChart3, ChevronLeft, Menu, Warehouse // ADDED WAREHOUSE ICON
 } from "lucide-react";
 import { useRouter, usePathname } from "next/navigation";
+import { cubicBezier } from "framer-motion";
 
 /* ─── DESIGN TOKENS ─────────────────────────────────────────── */
 export const C = {
@@ -61,7 +62,7 @@ const SIDEBAR_MENU = [
   }
 ];
 
-const easeOutCirc = [0.0, 0.55, 0.45, 1];
+const easeOutCirc = cubicBezier(0.0, 0.55, 0.45, 1);
 
 interface SidebarProps {
   isCollapsed: boolean;
