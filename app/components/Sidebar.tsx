@@ -4,7 +4,7 @@ import React from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
   Users, LayoutDashboard, Link as LinkIcon, UserCheck, 
-  UserCog, Settings, BarChart3, ChevronLeft, Menu 
+  UserCog, Settings, BarChart3, ChevronLeft, Menu, Warehouse // ADDED WAREHOUSE ICON
 } from "lucide-react";
 import { useRouter, usePathname } from "next/navigation";
 
@@ -49,6 +49,8 @@ const SIDEBAR_MENU = [
     items: [
       { id: "user_mgmt", label: "User Management", icon: UserCog, path: "/users" },
       { id: "master_mgmt", label: "Master Management", icon: Settings, path: "/master" },
+      // ADDED WAREHOUSE MENU ITEM HERE
+      { id: "warehouses", label: "Warehouses", icon: Warehouse, path: "/warehouse" }, 
     ]
   },
   {
