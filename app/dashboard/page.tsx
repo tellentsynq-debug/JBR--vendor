@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence, cubicBezier } from "framer-motion";
 import { useRouter, usePathname } from "next/navigation"; 
 import { 
   Users, 
@@ -77,7 +77,7 @@ const GLOBAL_CSS = `
 `;
 
 /* ─── ANIMATION VARIANTS ─────────────────────────────────────── */
-const easeOutCirc = [0.0, 0.55, 0.45, 1];
+const easeOutCirc = cubicBezier(0.0, 0.55, 0.45, 1);
 const spring = { type: "spring", stiffness: 200, damping: 20 };
 
 const containerVars = {
@@ -525,3 +525,4 @@ export default function JBRLayout() {
     </>
   );
 }
+

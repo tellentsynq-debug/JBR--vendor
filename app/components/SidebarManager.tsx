@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence, cubicBezier } from "framer-motion";
 import { 
   LayoutDashboard, 
   Users, 
@@ -67,7 +67,7 @@ const MANAGER_SIDEBAR_MENU = [
   }
 ];
 
-const easeOutCirc = [0.0, 0.55, 0.45, 1];
+const easeOutCirc = cubicBezier(0.0, 0.55, 0.45, 1);
 
 interface ManagerSidebarProps {
   isCollapsed: boolean;
@@ -160,3 +160,4 @@ export default function ManagerSidebar({ isCollapsed, setCollapsed, activeTab, s
     </motion.aside>
   );
 }
+

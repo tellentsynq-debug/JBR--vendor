@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useCallback } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence, cubicBezier, Variants } from "framer-motion";
 import { useRouter } from "next/navigation";
 import {
   LogOut, Plus, Search, Copy, Check, Edit2, EyeOff, Eye, X,
@@ -102,12 +102,12 @@ function getCampaignLink(camp: Campaign): string {
 }
 
 /* ─── ANIMATION VARIANTS ─────────────────────────────────────── */
-const easeOutCirc = [0.0, 0.55, 0.45, 1];
-const containerVars = {
+const easeOutCirc = cubicBezier(0.0, 0.55, 0.45, 1);
+const containerVars: Variants = {
   hidden: { opacity: 0 },
   show: { opacity: 1, transition: { staggerChildren: 0.07, delayChildren: 0.1 } }
 };
-const itemVars = {
+const itemVars: Variants = {
   hidden: { opacity: 0, y: 12 },
   show: { opacity: 1, y: 0, transition: { type: "spring", stiffness: 200, damping: 22 } }
 };

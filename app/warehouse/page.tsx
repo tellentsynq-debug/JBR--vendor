@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence, cubicBezier } from "framer-motion";
 import {
   LogOut, Plus, Search, Edit2, X, Trash2, AlertTriangle,
   Warehouse, MapPin, User, Building2, Check, RefreshCw
@@ -723,3 +723,4 @@ export default function WarehousePage() {
     </>
   );
 }
+

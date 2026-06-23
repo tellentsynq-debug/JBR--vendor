@@ -84,7 +84,7 @@ interface CampaignData {
 }
 
 /* ─── ANIMATION VARIANTS ─────────────────────────────────────── */
-const easeOutCirc = [0.0, 0.55, 0.45, 1];
+const easeOutCirc = cubicBezier(0.0, 0.55, 0.45, 1);
 const containerVars = {
   hidden: { opacity: 0 },
   show: { opacity: 1, transition: { staggerChildren: 0.1, delayChildren: 0.1 } },

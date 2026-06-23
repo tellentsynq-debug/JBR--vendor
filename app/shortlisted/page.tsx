@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useCallback, useRef, useMemo } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence, cubicBezier } from "framer-motion";
 import {
   LogOut, Search, ChevronDown, CheckCircle, MessageCircle, Users,
   Trash2, Eye, UserCheck, ChevronLeft, ChevronRight, Square,
@@ -145,7 +145,7 @@ const getVerificationBadge = (status?: string) => {
 };
 
 /* ─── ANIMATION VARIANTS ─────────────────────────────────────── */
-const easeOutCirc = [0.0, 0.55, 0.45, 1];
+const easeOutCirc = cubicBezier(0.0, 0.55, 0.45, 1);
 const containerVars = {
   hidden: { opacity: 0 },
   show: { opacity: 1, transition: { staggerChildren: 0.04, delayChildren: 0.1 } },
@@ -2327,3 +2327,4 @@ export default function ShortlistedPage() {
     </>
   );
 }
+
