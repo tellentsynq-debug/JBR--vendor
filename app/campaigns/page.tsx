@@ -97,7 +97,7 @@ function toInputDate(iso: string): string {
 
 function getCampaignLink(camp: Campaign): string {
   const tokenValue = camp.link_token ?? String(camp.id);
-  const baseUrl = typeof window !== "undefined" ? window.location.origin : "";
+  const baseUrl = "https://jbr-user.vercel.app";
   return `${baseUrl}/employee-register?token=${tokenValue}`;
 }
 
