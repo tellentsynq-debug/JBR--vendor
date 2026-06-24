@@ -598,16 +598,16 @@ export default function JBRAuth() {
         zIndex: 50
       }} />
 
-      <div style={{
-        minHeight: "100vh", display: "flex", alignItems: "stretch", padding: "32px",
-        position: "relative", zIndex: 1, fontFamily: "'DM Sans', sans-serif",
-      }}>
+     <div style={{
+  minHeight: "100vh", display: "flex", alignItems: "stretch", padding: "32px",
+  position: "relative", zIndex: 1, fontFamily: "'DM Sans', sans-serif",
+}} className="auth-shell">
         <div style={{
-          display: "flex", width: "100%", background: C.card,
-          border: `1px solid ${C.border}`, borderRadius: "24px", overflow: "hidden",
-          boxShadow: "0 1px 3px rgba(0,0,0,0.06), 0 4px 16px rgba(0,0,0,0.06)",
-          animation: "fadeUp 0.6s cubic-bezier(0.4,0,0.2,1) 0.05s both", position: "relative",
-        }}>
+  display: "flex", width: "100%", background: C.card,
+  border: `1px solid ${C.border}`, borderRadius: "24px", overflow: "hidden",
+  boxShadow: "0 1px 3px rgba(0,0,0,0.06), 0 4px 16px rgba(0,0,0,0.06)",
+  animation: "fadeUp 0.6s cubic-bezier(0.4,0,0.2,1) 0.05s both", position: "relative",
+}} className="auth-card">
 
           <BrandPanel />
 
@@ -733,10 +733,17 @@ export default function JBRAuth() {
       </div>
 
       <style>{`
-        @media (max-width: 700px) {
-          .brand-hide { display: none !important; }
-        }
-      `}</style>
+  @media (max-width: 700px) {
+    .brand-hide { display: none !important; }
+    .auth-shell { padding: 0 !important; }
+    .auth-card {
+      border-radius: 0 !important;
+      min-height: 100dvh !important;
+      border: none !important;
+      box-shadow: none !important;
+    }
+  }
+`}</style>
     </>
   );
 }
